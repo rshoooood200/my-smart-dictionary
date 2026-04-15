@@ -1,0 +1,463 @@
+'use client'
+
+import { useState, useCallback } from 'react'
+import { motion } from 'framer-motion'
+import {
+  Palette, Type, Bell, Clock, Keyboard,
+  Moon, Sun, Monitor, Volume2, VolumeX,
+  RefreshCw, Target, Brain, Save, RotateCcw,
+  Zap, Sliders, Eye
+} from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Slider } from '@/components/ui/slider'
+import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+
+// الألوان المتاحة
+const PRIMARY_COLORS = [
+  { id: 'emerald', color: '#10B981', name: 'زمردي' },
+  { id: 'violet', color: '#8B5CF6', name: 'بنفسجي' },
+  { id: 'rose', color: '#F43F5E', name: 'وردي' },
+  { id: 'amber', color: '#F59E0B', name: 'كهرماني' },
+  { id: 'cyan', color: '#06B6D4', name: 'سماوي' },
+  { id: 'orange', color: '#F97316', name: 'برتقالي' },
+]
+
+// اختصارات لوحة المفاتيح الافتراضية
+const DEFAULT_SHORTCUTS: Record<string, string> = {
+  addWord: 'Ctrl+N',
+  startReview: 'Ctrl+R',
+  toggleFavorite: 'Ctrl+F',
+  searchWords: 'Ctrl+K',
+  showAnswer: 'Space',
+  markEasy: '1',
+  markGood: '2',
+  markHard: '3',
+  markAgain: '4',
+}
+
+export function AdvancedSettings() {
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system')
+  const [primaryColor, setPrimaryColor] = useState('emerald')
+  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium')
+  const [reducedMotion, setReducedMotion] = useState(false)
+  const [dailyGoal, setDailyGoal] = useState(20)
+  const [showHints, setShowHints] = useState(true)
+  const [autoPlayAudio, setAutoPlayAudio] = useState(true)
+  const [reviewReminder, setReviewReminder] = useState(true)
+  const [reviewTime, setReviewTime] = useState('08:00')
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [shortcutsEnabled, setShortcutsEnabled] = useState(true)
+  const [hasChanges, setHasChanges] = useState(false)
+  const [activeTab, setActiveTab] = useState('appearance')
+
+  // تطبيق الإعدادات
+  const applySettings = useCallback(() => {
+    const root = document.documentElement
+    if (theme === 'dark') {
+      root.classList.add('dark')
+    } else if (theme === 'light') {
+      root.classList.remove('dark')
+    }
+    
+    const fontSizes = { small: '14px', medium: '16px', large: '18px' }
+    root.style.setProperty('--font-size-base', fontSizes[fontSize])
+    
+    const colorObj = PRIMARY_COLORS.find(c => c.id === primaryColor)
+    if (colorObj) {
+      root.style.setProperty('--color-primary', colorObj.color)
+    }
+  }, [theme, fontSize, primaryColor])
+
+  // حفظ الإعدادات
+  const saveSettings = useCallback(() => {
+    const settings = {
+      theme,
+      primaryColor,
+      fontSize,
+      reducedMotion,
+      dailyGoal,
+      showHints,
+      autoPlayAudio,
+      reviewReminder,
+      reviewTime,
+      soundEnabled,
+      shortcutsEnabled,
+    }
+    localStorage.setItem('app-settings', JSON.stringify(settings))
+    setHasChanges(false)
+    toast.success('تم حفظ الإعدادات بنجاح!')
+    applySettings()
+  }, [theme, primaryColor, fontSize, reducedMotion, dailyGoal, showHints, autoPlayAudio, reviewReminder, reviewTime, soundEnabled, shortcutsEnabled, applySettings])
+
+  // إعادة تعيين الإعدادات
+  const resetSettings = useCallback(() => {
+    setTheme('system')
+    setPrimaryColor('emerald')
+    setFontSize('medium')
+    setReducedMotion(false)
+    setDailyGoal(20)
+    setShowHints(true)
+    setAutoPlayAudio(true)
+    setReviewReminder(true)
+    setReviewTime('08:00')
+    setSoundEnabled(true)
+    setShortcutsEnabled(true)
+    setHasChanges(true)
+    toast.info('تم إعادة تعيين الإعدادات إلى الافتراضية')
+  }, [])
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <Card className="border-0 shadow-md overflow-hidden">
+        <div className="h-2 bg-gradient-to-l from-violet-500 to-purple-600" />
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
+                <Sliders className="w-6 h-6 text-violet-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg">إعدادات متقدمة</h3>
+                <p className="text-sm text-gray-500">خصص تجربتك التعليمية</p>
+              </div>
+            </div>
+            {hasChanges && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+              >
+                <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                  تغييرات غير محفوظة
+                </Badge>
+              </motion.div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="appearance">
+            <Palette className="w-4 h-4 mr-1" />
+            المظهر
+          </TabsTrigger>
+          <TabsTrigger value="review">
+            <Brain className="w-4 h-4 mr-1" />
+            المراجعة
+          </TabsTrigger>
+          <TabsTrigger value="notifications">
+            <Bell className="w-4 h-4 mr-1" />
+            الإشعارات
+          </TabsTrigger>
+          <TabsTrigger value="shortcuts">
+            <Keyboard className="w-4 h-4 mr-1" />
+            الاختصارات
+          </TabsTrigger>
+        </TabsList>
+
+        {/* تبويب المظهر */}
+        <TabsContent value="appearance" className="space-y-4 mt-4">
+          {/* الثيم */}
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Moon className="w-4 h-4" />
+                الوضع اللوني
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { id: 'light', label: 'فاتح', icon: Sun },
+                  { id: 'dark', label: 'داكن', icon: Moon },
+                  { id: 'system', label: 'النظام', icon: Monitor },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => { setTheme(t.id as typeof theme); setHasChanges(true) }}
+                    className={cn(
+                      "p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2",
+                      theme === t.id
+                        ? "border-violet-500 bg-violet-50 dark:bg-violet-900/20"
+                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                    )}
+                  >
+                    <t.icon className={cn(
+                      "w-6 h-6",
+                      theme === t.id ? "text-violet-600" : "text-gray-500"
+                    )} />
+                    <span className="text-sm font-medium">{t.label}</span>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* اللون الرئيسي */}
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Palette className="w-4 h-4" />
+                اللون الرئيسي
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                {PRIMARY_COLORS.map((color) => (
+                  <button
+                    key={color.id}
+                    onClick={() => { setPrimaryColor(color.id); setHasChanges(true) }}
+                    className={cn(
+                      "p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2",
+                      primaryColor === color.id
+                        ? "border-gray-800 dark:border-gray-200"
+                        : "border-transparent hover:border-gray-300"
+                    )}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-full"
+                      style={{ backgroundColor: color.color }}
+                    />
+                    <span className="text-xs">{color.name}</span>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* حجم الخط */}
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Type className="w-4 h-4" />
+                حجم الخط
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'small', label: 'صغير' },
+                  { id: 'medium', label: 'متوسط' },
+                  { id: 'large', label: 'كبير' },
+                ].map((size) => (
+                  <Button
+                    key={size.id}
+                    variant={fontSize === size.id ? 'default' : 'outline'}
+                    onClick={() => { setFontSize(size.id as typeof fontSize); setHasChanges(true) }}
+                  >
+                    {size.label}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* خيارات إضافية */}
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">خيارات إضافية</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Zap className="w-5 h-5 text-gray-500" />
+                  <div>
+                    <p className="font-medium text-sm">تقليل الحركة</p>
+                    <p className="text-xs text-gray-500">تقليل الرسوم المتحركة</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={reducedMotion}
+                  onCheckedChange={(v) => { setReducedMotion(v); setHasChanges(true) }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* تبويب المراجعة */}
+        <TabsContent value="review" className="space-y-4 mt-4">
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Target className="w-4 h-4" />
+                الهدف اليومي
+              </CardTitle>
+              <CardDescription>عدد الكلمات المراد مراجعتها يومياً</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Slider
+                  value={[dailyGoal]}
+                  min={5}
+                  max={100}
+                  step={5}
+                  onValueChange={([v]) => { setDailyGoal(v); setHasChanges(true) }}
+                />
+                <div className="flex justify-center">
+                  <Badge className="bg-violet-100 text-violet-700 text-lg px-4 py-1">
+                    {dailyGoal} كلمة
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">إعدادات المراجعة</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div>
+                  <p className="font-medium text-sm">إظهار التلميحات</p>
+                  <p className="text-xs text-gray-500">عرض معلومات مساعدة</p>
+                </div>
+                <Switch
+                  checked={showHints}
+                  onCheckedChange={(v) => { setShowHints(v); setHasChanges(true) }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div>
+                  <p className="font-medium text-sm">تشغيل الصوت تلقائياً</p>
+                  <p className="text-xs text-gray-500">نطق الكلمة عند ظهورها</p>
+                </div>
+                <Switch
+                  checked={autoPlayAudio}
+                  onCheckedChange={(v) => { setAutoPlayAudio(v); setHasChanges(true) }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* تبويب الإشعارات */}
+        <TabsContent value="notifications" className="space-y-4 mt-4">
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Bell className="w-4 h-4" />
+                الإشعارات
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-gray-500" />
+                  <div>
+                    <p className="font-medium text-sm">تذكير يومي</p>
+                    <p className="text-xs text-gray-500">تذكير بمراجعة الكلمات</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={reviewReminder}
+                  onCheckedChange={(v) => { setReviewReminder(v); setHasChanges(true) }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex items-center gap-3">
+                  {soundEnabled ? (
+                    <Volume2 className="w-5 h-5 text-emerald-500" />
+                  ) : (
+                    <VolumeX className="w-5 h-5 text-gray-400" />
+                  )}
+                  <div>
+                    <p className="font-medium text-sm">الأصوات</p>
+                    <p className="text-xs text-gray-500">تشغيل أصوات التنبيهات</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={soundEnabled}
+                  onCheckedChange={(v) => { setSoundEnabled(v); setHasChanges(true) }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* تبويب الاختصارات */}
+        <TabsContent value="shortcuts" className="space-y-4 mt-4">
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Keyboard className="w-4 h-4" />
+                  اختصارات لوحة المفاتيح
+                </CardTitle>
+                <Switch
+                  checked={shortcutsEnabled}
+                  onCheckedChange={(v) => { setShortcutsEnabled(v); setHasChanges(true) }}
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {Object.entries(DEFAULT_SHORTCUTS).map(([action, keys]) => (
+                  <div
+                    key={action}
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                  >
+                    <span className="text-sm">
+                      {action === 'addWord' ? 'إضافة كلمة' :
+                       action === 'startReview' ? 'بدء المراجعة' :
+                       action === 'toggleFavorite' ? 'تبديل المفضلة' :
+                       action === 'searchWords' ? 'بحث' :
+                       action === 'showAnswer' ? 'إظهار الإجابة' : action}
+                    </span>
+                    <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono">
+                      {keys}
+                    </kbd>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* أزرار الحفظ */}
+      {hasChanges && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-auto z-50"
+        >
+          <Card className="border-0 shadow-xl bg-violet-600 text-white">
+            <CardContent className="p-4 flex items-center justify-between gap-4">
+              <span className="text-sm">لديك تغييرات غير محفوظة</span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetSettings}
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                >
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                  إعادة تعيين
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={saveSettings}
+                  className="bg-white text-violet-600 hover:bg-white/90"
+                >
+                  <Save className="w-4 h-4 mr-1" />
+                  حفظ
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+    </div>
+  )
+}
