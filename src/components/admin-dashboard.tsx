@@ -23,8 +23,8 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { GamesQuizzesManager } from './admin/games-quizzes-manager'
 
-// مفتاح الوصول للوحة التحكم
-const ADMIN_KEY = 'my-dictionary-admin-key-2024'
+// مفتاح الوصول للوحة التحكم (مخفي - لا تشاركه)
+const ADMIN_KEY = 'founderandmanager'
 
 // الفئات الأساسية الافتراضية لتعليم الأشبال (5-14 سنة)
 const DEFAULT_KIDS_CATEGORIES = [
@@ -891,9 +891,6 @@ export function AdminDashboard() {
               <LogIn className="w-4 h-4 mr-2" />
               دخول
             </Button>
-            <p className="text-xs text-gray-500 text-center">
-              المفتاح الافتراضي: my-dictionary-admin-key-2024
-            </p>
           </div>
         </DialogContent>
       </Dialog>
