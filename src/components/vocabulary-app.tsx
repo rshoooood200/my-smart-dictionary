@@ -593,11 +593,11 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
       )}
 
       {/* Sidebar */}
-      <motion.aside 
-        initial={false} 
-        animate={{ x: sidebarOpen || !isMobile ? 0 : '100%' }}
+      <motion.aside
+        initial={false}
+        animate={{ x: sidebarOpen || !isMobile ? 0 : '-100%' }}
         transition={{ type: 'tween', duration: 0.25 }}
-        className={cn("bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col shadow-xl z-50", isMobile ? "fixed right-0 top-0 h-full w-72" : "w-64")}
+        className={cn("bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col shadow-xl z-50", isMobile ? "fixed left-0 top-0 h-full w-72" : "w-64")}
       >
         {/* Sidebar Header */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
