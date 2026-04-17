@@ -104,8 +104,8 @@ const navItems: NavItem[] = [
   { id: 'admin', label: 'لوحة المؤسس', icon: Crown },
 ]
 
-// المفتاح السري للمؤسس (مخفي)
-const FOUNDER_KEY = 'founderandmanager'
+// البريد الإلكتروني للمؤسس فقط
+const FOUNDER_EMAIL = 'manager@gmail.com'
 
 const avatarColors = ['from-emerald-500 to-teal-600', 'from-violet-500 to-purple-600', 'from-orange-500 to-amber-600', 'from-cyan-500 to-blue-600', 'from-rose-500 to-pink-600']
 
@@ -119,13 +119,10 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
   // Get current user from users list
   const currentUser = users.find(u => u.id === currentUserId)
   
-  // التحقق من صلاحية المؤسس (مخفي)
-  const isFounder = currentUser?.email?.toLowerCase().includes(FOUNDER_KEY)
-  
   // قائمة التنقل - تظهر لوحة المؤسس فقط للمؤسس
   const filteredNavItems = navItems.filter(item => {
     if (item.id === 'admin') {
-      return isFounder
+      return currentUser?.email === FOUNDER_EMAIL
     }
     return true
   })
@@ -1279,7 +1276,7 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
                 </Card>
               </motion.div>
             )}
-            {activeNav === 'admin' && isFounder && (
+            {activeNav === 'admin' && currentUser?.email === FOUNDER_EMAIL && (
               <motion.div key="admin" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <AdminDashboard />
               </motion.div>
