@@ -104,6 +104,9 @@ const navItems: NavItem[] = [
   { id: 'admin', label: 'لوحة المؤسس', icon: Crown },
 ]
 
+// البريد الإلكتروني للمؤسس فقط
+const FOUNDER_EMAIL = 'manager@gmail.com'
+
 const avatarColors = ['from-emerald-500 to-teal-600', 'from-violet-500 to-purple-600', 'from-orange-500 to-amber-600', 'from-cyan-500 to-blue-600', 'from-rose-500 to-pink-600']
 
 interface VocabularyAppProps {
@@ -115,6 +118,14 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
 
   // Get current user from users list
   const currentUser = users.find(u => u.id === currentUserId)
+  
+  // قائمة التنقل - تظهر لوحة المؤسس فقط للمؤسس
+  const filteredNavItems = navItems.filter(item => {
+    if (item.id === 'admin') {
+      return currentUser?.email === FOUNDER_EMAIL
+    }
+    return true
+  })
 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
@@ -619,7 +630,7 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
         {/* Navigation */}
         <nav className="flex-1 p-3 overflow-y-auto">
           <div className="space-y-1">
-            {navItems.map((item) => (
+            {filteredNavItems.map((item) => (
               <div key={item.id}>
                 <button
                   className={cn(
@@ -710,7 +721,7 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
             <Menu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
           </button>
           <h1 className="font-bold text-gray-900 dark:text-white">
-            {navItems.find(n => n.id === activeNav)?.label || navItems.find(n => n.children?.some(c => c.id === activeNav))?.children?.find(c => c.id === activeNav)?.label || 'الرئيسية'}
+            {filteredNavItems.find(n => n.id === activeNav)?.label || filteredNavItems.find(n => n.children?.some(c => c.id === activeNav))?.children?.find(c => c.id === activeNav)?.label || 'الرئيسية'}
           </h1>
           <button className="p-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors" onClick={() => setIsAddDialogOpen(true)}>
             <Plus className="w-5 h-5" />
@@ -722,7 +733,7 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
           <div className="hidden md:flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {navItems.find(n => n.id === activeNav)?.label || navItems.find(n => n.children?.some(c => c.id === activeNav))?.children?.find(c => c.id === activeNav)?.label || 'الرئيسية'}
+                {filteredNavItems.find(n => n.id === activeNav)?.label || filteredNavItems.find(n => n.children?.some(c => c.id === activeNav))?.children?.find(c => c.id === activeNav)?.label || 'الرئيسية'}
               </h1>
               <p className="text-gray-500 text-sm">مرحباً، {currentUser?.name || 'مستخدم'}! 👋</p>
             </div>
@@ -1265,7 +1276,7 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
                 </Card>
               </motion.div>
             )}
-            {activeNav === 'admin' && (
+            {activeNav === 'admin' && currentUser?.email === FOUNDER_EMAIL && (
               <motion.div key="admin" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <AdminDashboard />
               </motion.div>
