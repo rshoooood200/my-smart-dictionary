@@ -162,6 +162,9 @@ export function AdminDashboard() {
   const [mainSection, setMainSection] = useState<MainSection>('kids')
   const [contentType, setContentType] = useState<ContentType>('categories')
   
+  // فلتر الفئات للفيديوهات
+  const [selectedVideoCategory, setSelectedVideoCategory] = useState<string>('all')
+  
   const [searchQuery, setSearchQuery] = useState('')
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [editingItem, setEditingItem] = useState<AdminVideo | AdminLesson | AdminCategory | AdminUpdate | AdminNote | null>(null)
@@ -820,22 +823,25 @@ export function AdminDashboard() {
       .sort((a, b) => (a.order || 0) - (b.order || 0))
   }
 
-  const getFilteredVideos = (ageGroup: 'kids' | 'adults') => {
+  const getFilteredVideos = (ageGroup: 'kids' | 'adults', category?: string) => {
     return videos.filter(v => {
       const match = ageGroup === 'kids' 
         ? (v.ageGroup !== 'adults' && v.difficulty !== 'hard' && v.difficulty !== 'expert')
         : (v.ageGroup === 'adults' || v.difficulty === 'hard' || v.difficulty === 'expert')
       
+      // فلترة حسب الفئة المحددة
+      const categoryMatch = category && category !== 'all' ? v.category === category : true
+      
       if (searchQuery) {
-        return match && (v.titleAr.includes(searchQuery) || v.title.toLowerCase().includes(searchQuery.toLowerCase()))
+        return match && categoryMatch && (v.titleAr.includes(searchQuery) || v.title.toLowerCase().includes(searchQuery.toLowerCase()))
       }
-      return match
+      return match && categoryMatch
     }).sort((a, b) => (a.order || 0) - (b.order || 0))
   }
 
-  // إعادة ترتيب الفيديوهات
-  const handleReorderVideos = async (videoId: string, direction: 'up' | 'down', ageGroup: 'kids' | 'adults') => {
-    const allVideos = getFilteredVideos(ageGroup)
+  // إعادة ترتيب الفيديوهات داخل فئة محددة
+  const handleReorderVideos = async (videoId: string, direction: 'up' | 'down', ageGroup: 'kids' | 'adults', category?: string) => {
+    const allVideos = getFilteredVideos(ageGroup, category)
     const currentIndex = allVideos.findIndex(v => v.id === videoId)
     
     if (direction === 'up' && currentIndex === 0) return
@@ -1438,31 +1444,46 @@ export function AdminDashboard() {
                       <Video className="w-5 h-5 text-amber-500" />
                       فيديوهات الأشبال
                     </CardTitle>
-                    <Button
-                      size="sm"
-                      className="bg-gradient-to-r from-amber-500 to-orange-500"
-                      onClick={() => {
-                        resetVideoForm()
-                        setVideoForm({ ...videoForm, ageGroup: '5-7', difficulty: 'easy' })
-                        setEditingItem(null)
-                        setEditingType('video')
-                        setShowAddDialog(true)
-                      }}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      إضافة فيديو
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Select value={selectedVideoCategory} onValueChange={setSelectedVideoCategory}>
+                        <SelectTrigger className="w-40">
+                          <SelectValue placeholder="اختر الفئة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">جميع الفئات</SelectItem>
+                          {getFilteredCategories('kids').map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.icon} {cat.nameAr}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        className="bg-gradient-to-r from-amber-500 to-orange-500"
+                        onClick={() => {
+                          resetVideoForm()
+                          setVideoForm({ ...videoForm, ageGroup: '5-7', difficulty: 'easy', category: selectedVideoCategory !== 'all' ? selectedVideoCategory : 'alphabet' })
+                          setEditingItem(null)
+                          setEditingType('video')
+                          setShowAddDialog(true)
+                        }}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        إضافة فيديو
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {getFilteredVideos('kids').length === 0 ? (
+                  {getFilteredVideos('kids', selectedVideoCategory).length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
                       <Video className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p>لا توجد فيديوهات للأشبال</p>
+                      <p>لا توجد فيديوهات {selectedVideoCategory !== 'all' ? 'في هذه الفئة' : 'للأشبال'}</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {getFilteredVideos('kids').map((video, index, videosArray) => (
+                      {getFilteredVideos('kids', selectedVideoCategory).map((video, index, videosArray) => (
                         <Card key={video.id} className="overflow-hidden group">
                           <div className="flex items-center gap-4 p-3">
                             {/* أزرار الترتيب */}
@@ -1472,7 +1493,7 @@ export function AdminDashboard() {
                                 size="icon"
                                 className="w-7 h-7"
                                 disabled={index === 0}
-                                onClick={() => handleReorderVideos(video.id, 'up', 'kids')}
+                                onClick={() => handleReorderVideos(video.id, 'up', 'kids', selectedVideoCategory)}
                               >
                                 <ArrowUp className="w-4 h-4" />
                               </Button>
@@ -1481,7 +1502,7 @@ export function AdminDashboard() {
                                 size="icon"
                                 className="w-7 h-7"
                                 disabled={index === videosArray.length - 1}
-                                onClick={() => handleReorderVideos(video.id, 'down', 'kids')}
+                                onClick={() => handleReorderVideos(video.id, 'down', 'kids', selectedVideoCategory)}
                               >
                                 <ArrowDown className="w-4 h-4" />
                               </Button>
@@ -1938,31 +1959,46 @@ export function AdminDashboard() {
                       <Video className="w-5 h-5 text-indigo-500" />
                       فيديوهات الكبار
                     </CardTitle>
-                    <Button
-                      size="sm"
-                      className="bg-gradient-to-r from-indigo-500 to-purple-500"
-                      onClick={() => {
-                        resetVideoForm()
-                        setVideoForm({ ...videoForm, ageGroup: 'adults', difficulty: 'medium' })
-                        setEditingItem(null)
-                        setEditingType('video')
-                        setShowAddDialog(true)
-                      }}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      إضافة فيديو
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Select value={selectedVideoCategory} onValueChange={setSelectedVideoCategory}>
+                        <SelectTrigger className="w-40">
+                          <SelectValue placeholder="اختر الفئة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">جميع الفئات</SelectItem>
+                          {getFilteredCategories('adults').map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.icon} {cat.nameAr}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        className="bg-gradient-to-r from-indigo-500 to-purple-500"
+                        onClick={() => {
+                          resetVideoForm()
+                          setVideoForm({ ...videoForm, ageGroup: 'adults', difficulty: 'medium', category: selectedVideoCategory !== 'all' ? selectedVideoCategory : 'business' })
+                          setEditingItem(null)
+                          setEditingType('video')
+                          setShowAddDialog(true)
+                        }}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        إضافة فيديو
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {getFilteredVideos('adults').length === 0 ? (
+                  {getFilteredVideos('adults', selectedVideoCategory).length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
                       <Video className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p>لا توجد فيديوهات للكبار</p>
+                      <p>لا توجد فيديوهات {selectedVideoCategory !== 'all' ? 'في هذه الفئة' : 'للكبار'}</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {getFilteredVideos('adults').map((video, index, videosArray) => (
+                      {getFilteredVideos('adults', selectedVideoCategory).map((video, index, videosArray) => (
                         <Card key={video.id} className="overflow-hidden group">
                           <div className="flex items-center gap-4 p-3">
                             {/* أزرار الترتيب */}
@@ -1972,7 +2008,7 @@ export function AdminDashboard() {
                                 size="icon"
                                 className="w-7 h-7"
                                 disabled={index === 0}
-                                onClick={() => handleReorderVideos(video.id, 'up', 'adults')}
+                                onClick={() => handleReorderVideos(video.id, 'up', 'adults', selectedVideoCategory)}
                               >
                                 <ArrowUp className="w-4 h-4" />
                               </Button>
@@ -1981,7 +2017,7 @@ export function AdminDashboard() {
                                 size="icon"
                                 className="w-7 h-7"
                                 disabled={index === videosArray.length - 1}
-                                onClick={() => handleReorderVideos(video.id, 'down', 'adults')}
+                                onClick={() => handleReorderVideos(video.id, 'down', 'adults', selectedVideoCategory)}
                               >
                                 <ArrowDown className="w-4 h-4" />
                               </Button>
