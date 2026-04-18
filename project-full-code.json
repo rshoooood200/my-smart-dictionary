@@ -1,0 +1,206 @@
+{
+  "project_name": "قاموسي الذكي - My Smart Dictionary",
+  "version": "4.0.0",
+  "description": "تطبيق ذكي لحفظ ومراجعة الكلمات الإنجليزية مع نظام مراجعة متطور ودعم الذكاء الاصطناعي",
+  
+  "file_structure": {
+    "package_json": {
+      "name": "nextjs_tailwind_shadcn_ts",
+      "version": "0.2.0",
+      "scripts": {
+        "dev": "next dev -p 3000",
+        "build": "next build",
+        "start": "NODE_ENV=production bun .next/standalone/server.js",
+        "lint": "eslint .",
+        "db:push": "prisma db push",
+        "db:generate": "prisma generate"
+      },
+      "dependencies": [
+        "@prisma/client",
+        "next",
+        "react",
+        "react-dom",
+        "framer-motion",
+        "zustand",
+        "lucide-react",
+        "sonner",
+        "tailwindcss",
+        "next-themes",
+        "bcryptjs",
+        "uuid"
+      ]
+    }
+  },
+
+  "database_schema": {
+    "models": [
+      "User - المستخدم",
+      "Category - الفئات",
+      "Word - الكلمات",
+      "Sentence - الجمل",
+      "ReviewSession - جلسات المراجعة",
+      "Story - القصص",
+      "Note - الملاحظات",
+      "CustomList - القوائم المخصصة",
+      "LearningPath - مسارات التعلم",
+      "Achievement - الإنجازات",
+      "AdminVideo - فيديوهات المشرف",
+      "AdminLesson - دروس المشرف",
+      "AdminCategory - فئات المشرف",
+      "KidsQuiz - اختبارات الأشبال",
+      "KidsGame - ألعاب الأشبال",
+      "KidsFlashcard - بطاقات تعليمية",
+      "KidsProgress - تقدم الأشبال"
+    ],
+    "database": "PostgreSQL (Neon)"
+  },
+
+  "main_files": {
+    "src_app_page_tsx": {
+      "description": "الصفحة الرئيسية - نقطة الدخول للتطبيق",
+      "content": "'use client'\n\nimport { useCallback, useEffect, useState, useRef } from 'react'\nimport { AuthPage } from '@/components/auth/AuthPage'\nimport { VocabularyApp } from '@/components/vocabulary-app'\nimport { useAuth } from '@/contexts/AuthContext'\nimport { useVocabStore } from '@/store/vocab-store'\n\nconst APP_VERSION = '4.0.0'\n\nexport default function Page() {\n  const { user, loading: authLoading, logout } = useAuth()\n  const { selectUser, loadWords, loadCategories, loadNotes, loadStats, currentUserId, setUsers } = useVocabStore()\n  const [mounted, setMounted] = useState(false)\n  const [dataLoaded, setDataLoaded] = useState(false)\n\n  useEffect(() => { setMounted(true) }, [])\n\n  useEffect(() => {\n    if (user && !currentUserId) {\n      setUsers([user])\n      selectUser(user.id)\n    }\n  }, [user, currentUserId])\n\n  useEffect(() => {\n    if (currentUserId && user) {\n      Promise.all([loadWords(), loadCategories(), loadNotes()]).then(() => {\n        loadStats()\n        setDataLoaded(true)\n      })\n    }\n  }, [currentUserId, user])\n\n  if (!mounted || authLoading) return <LoadingSpinner />\n  if (!user) return <AuthPage />\n  if (!dataLoaded && currentUserId) return <LoadingSpinner />\n\n  return <VocabularyApp onLogout={logout} />\n}"
+    },
+
+    "src_app_layout_tsx": {
+      "description": "تخطيط التطبيق الرئيسي",
+      "content": "import type { Metadata } from 'next'\nimport './globals.css'\nimport { Toaster } from '@/components/ui/toaster'\nimport { Providers } from '@/components/providers'\n\nexport const metadata: Metadata = {\n  title: 'قاموسي الذكي - Vocabulary Learning App',\n  description: 'تطبيق ذكي لحفظ ومراجعة الكلمات الإنجليزية'\n}\n\nexport default function RootLayout({ children }: { children: React.ReactNode }) {\n  return (\n    <html lang='ar' dir='rtl' suppressHydrationWarning>\n      <body>\n        <Providers>{children}</Providers>\n        <Toaster />\n      </body>\n    </html>\n  )\n}"
+    },
+
+    "src_contexts_AuthContext_tsx": {
+      "description": "سياق المصادقة - إدارة تسجيل الدخول والخروج",
+      "key_features": [
+        "تسجيل الدخول بالبريد وكلمة المرور",
+        "إنشاء حساب جديد",
+        "حفظ الجلسة",
+        "تحديث بيانات المستخدم"
+      ]
+    },
+
+    "src_store_vocab-store_ts": {
+      "description": "مخزن Zustand لإدارة حالة التطبيق",
+      "key_features": [
+        "إدارة المستخدمين",
+        "إدارة الكلمات والفئات",
+        "نظام المراجعة SM-2",
+        "إدارة الملاحظات",
+        "تصدير واستيراد البيانات"
+      ]
+    },
+
+    "src_components_vocabulary-app_tsx": {
+      "description": "المكون الرئيسي للتطبيق",
+      "sections": [
+        "القاموس الذكي - إضافة وعرض الكلمات",
+        "المراجعة الذكية - خوارزمية SM-2",
+        "الألعاب التعليمية - Quiz, Matching, Speed, Spelling",
+        "القصص والملاحظات",
+        "المساعد الذكي AI",
+        "لوحة المؤسس - للمدير فقط"
+      ],
+      "founder_email": "manager@gmail.com",
+      "admin_password": "founderandmanager"
+    },
+
+    "src_components_admin-dashboard_tsx": {
+      "description": "لوحة تحكم المؤسس",
+      "features": [
+        "إدارة فيديوهات الأشبال والكبار",
+        "إدارة الفئات",
+        "إدارة الدروس",
+        "إدارة الإعلانات",
+        "إعادة ترتيب الفيديوهات",
+        "فلترة حسب الفئة"
+      ],
+      "default_kids_categories": [
+        "الحروف - Alphabet",
+        "الأرقام - Numbers",
+        "الألوان - Colors",
+        "الحيوانات - Animals",
+        "الأغاني - Songs",
+        "القصص - Stories",
+        "الألعاب - Games",
+        "الحياة اليومية - Daily Life",
+        "أجزاء الجسم - Body Parts",
+        "الطعام - Food"
+      ]
+    }
+  },
+
+  "api_routes": {
+    "authentication": [
+      "POST /api/auth/login - تسجيل الدخول",
+      "POST /api/auth/register - إنشاء حساب",
+      "POST /api/auth/logout - تسجيل الخروج",
+      "GET /api/auth/session - التحقق من الجلسة"
+    ],
+    "words": [
+      "GET /api/words - جلب الكلمات",
+      "POST /api/words - إضافة كلمة",
+      "PUT /api/words/[id] - تحديث كلمة",
+      "DELETE /api/words/[id] - حذف كلمة"
+    ],
+    "categories": [
+      "GET /api/categories - جلب الفئات",
+      "POST /api/categories - إضافة فئة",
+      "PUT /api/categories/[id] - تحديث فئة",
+      "DELETE /api/categories/[id] - حذف فئة"
+    ],
+    "admin": [
+      "GET/POST /api/admin/videos - إدارة الفيديوهات",
+      "GET/POST /api/admin/categories - إدارة الفئات",
+      "GET/POST /api/admin/lessons - إدارة الدروس",
+      "GET/POST /api/admin/updates - إدارة الإعلانات",
+      "GET/POST /api/admin/notes - إدارة الملاحظات"
+    ],
+    "kids": [
+      "GET/POST /api/kids/quizzes - الاختبارات",
+      "GET/POST /api/kids/games - الألعاب",
+      "GET/POST /api/kids/flashcards - البطاقات التعليمية",
+      "GET/POST /api/kids/progress - تقدم الطالب"
+    ]
+  },
+
+  "features": {
+    "vocabulary": {
+      "add_words": "إضافة كلمات جديدة مع الترجمة والنطق والتعريف",
+      "categories": "تنظيم الكلمات في فئات مخصصة",
+      "search": "البحث في الكلمات",
+      "favorites": "وضع علامة على الكلمات المفضلة",
+      "learned": "تتبع الكلمات المحفوظة"
+    },
+    "review": {
+      "algorithm": "SM-2 Spaced Repetition",
+      "modes": ["need-review", "random"],
+      "tracking": "تتبع التقدم والدقة"
+    },
+    "games": {
+      "quiz": "اختيار من متعدد",
+      "matching": "مطابقة الكلمات",
+      "speed": "تحدي السرعة",
+      "spelling": "تهجئة الكلمات",
+      "scramble": "إعادة ترتيب الحروف",
+      "listening": "استمع وأجب",
+      "challenge": "تحدي الوقت"
+    },
+    "admin_panel": {
+      "video_management": "إدارة الفيديوهات التعليمية",
+      "category_management": "إدارة الفئات",
+      "content_filtering": "فلترة حسب الفئة",
+      "video_reordering": "إعادة ترتيب الفيديوهات",
+      "announcements": "إدارة الإعلانات"
+    }
+  },
+
+  "security": {
+    "password_hashing": "bcryptjs",
+    "session_management": "sessionStorage for admin",
+    "founder_only_features": "لوحة المؤسس تظهر فقط لـ manager@gmail.com",
+    "admin_key": "founderandmanager (مخفي)"
+  },
+
+  "deployment": {
+    "platform": "Vercel",
+    "database": "Neon PostgreSQL",
+    "version_control": "GitHub"
+  }
+}
