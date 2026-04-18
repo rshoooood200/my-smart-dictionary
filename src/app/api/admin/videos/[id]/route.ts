@@ -9,25 +9,27 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { title, titleAr, description, descriptionAr, url, thumbnail, category, type, ageGroup, difficulty, duration, order, isActive } = body
+    
+    // بناء كائن البيانات للتحديث فقط الحقول الموجودة
+    const updateData: Record<string, unknown> = {}
+    
+    if (body.title !== undefined) updateData.title = body.title
+    if (body.titleAr !== undefined) updateData.titleAr = body.titleAr
+    if (body.description !== undefined) updateData.description = body.description
+    if (body.descriptionAr !== undefined) updateData.descriptionAr = body.descriptionAr
+    if (body.url !== undefined) updateData.url = body.url
+    if (body.thumbnail !== undefined) updateData.thumbnail = body.thumbnail
+    if (body.category !== undefined) updateData.category = body.category
+    if (body.type !== undefined) updateData.type = body.type || 'video'
+    if (body.ageGroup !== undefined) updateData.ageGroup = body.ageGroup
+    if (body.difficulty !== undefined) updateData.difficulty = body.difficulty || 'easy'
+    if (body.duration !== undefined) updateData.duration = body.duration || 0
+    if (body.order !== undefined) updateData.order = body.order
+    if (body.isActive !== undefined) updateData.isActive = body.isActive
 
     const video = await prisma.adminVideo.update({
       where: { id },
-      data: {
-        title,
-        titleAr,
-        description,
-        descriptionAr,
-        url,
-        thumbnail,
-        category,
-        type: type || 'video',
-        ageGroup,
-        difficulty: difficulty || 'easy',
-        duration: duration || 0,
-        order: order || 0,
-        isActive: isActive ?? true
-      }
+      data: updateData
     })
 
     return NextResponse.json(video)

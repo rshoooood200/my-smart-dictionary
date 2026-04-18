@@ -844,6 +844,7 @@ export function AdminDashboard() {
     const allVideos = getFilteredVideos(ageGroup, category)
     const currentIndex = allVideos.findIndex(v => v.id === videoId)
     
+    if (currentIndex === -1) return
     if (direction === 'up' && currentIndex === 0) return
     if (direction === 'down' && currentIndex === allVideos.length - 1) return
     
@@ -852,21 +853,37 @@ export function AdminDashboard() {
     const swapVideo = allVideos[swapIndex]
     
     try {
-      // تبديل الترتيب
-      await fetch(`/api/admin/videos/${currentVideo.id}`, {
+      // تعيين قيم الترتيب الجديدة
+      const currentOrder = currentVideo.order ?? currentIndex
+      const swapOrder = swapVideo.order ?? swapIndex
+      
+      // تحديث الفيديو الحالي
+      const response1 = await fetch(`/api/admin/videos/${currentVideo.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order: swapVideo.order || swapIndex })
-      })
-      await fetch(`/api/admin/videos/${swapVideo.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order: currentVideo.order || currentIndex })
+        body: JSON.stringify({ order: swapOrder })
       })
       
-      hasFetchedData.current = false
-      await fetchAllData()
-      toast.success('تم تحديث الترتيب')
+      // تحديث الفيديو المتبادل
+      const response2 = await fetch(`/api/admin/videos/${swapVideo.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: currentOrder })
+      })
+      
+      if (response1.ok && response2.ok) {
+        // تحديث محلي فوري لتجنب انتظار إعادة التحميل
+        setVideos(prevVideos => {
+          return prevVideos.map(v => {
+            if (v.id === currentVideo.id) return { ...v, order: swapOrder }
+            if (v.id === swapVideo.id) return { ...v, order: currentOrder }
+            return v
+          })
+        })
+        toast.success('تم تحديث الترتيب')
+      } else {
+        toast.error('حدث خطأ في تحديث الترتيب')
+      }
     } catch (error) {
       console.error('Error reordering videos:', error)
       toast.error('حدث خطأ في تحديث الترتيب')
