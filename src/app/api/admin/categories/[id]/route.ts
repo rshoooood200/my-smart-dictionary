@@ -9,21 +9,23 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { name, nameAr, description, descriptionAr, icon, color, type, order, isActive } = body
+    
+    // بناء كائن البيانات للتحديث - فقط تحديث الحقول المرسلة
+    const data: Record<string, unknown> = {}
+    
+    if (body.name !== undefined) data.name = body.name
+    if (body.nameAr !== undefined) data.nameAr = body.nameAr
+    if (body.description !== undefined) data.description = body.description
+    if (body.descriptionAr !== undefined) data.descriptionAr = body.descriptionAr
+    if (body.icon !== undefined) data.icon = body.icon
+    if (body.color !== undefined) data.color = body.color
+    if (body.type !== undefined) data.type = body.type
+    if (body.order !== undefined) data.order = body.order
+    if (body.isActive !== undefined) data.isActive = body.isActive
 
     const category = await prisma.adminCategory.update({
       where: { id },
-      data: {
-        name,
-        nameAr,
-        description,
-        descriptionAr,
-        icon,
-        color,
-        type,
-        order,
-        isActive
-      }
+      data
     })
 
     return NextResponse.json(category)

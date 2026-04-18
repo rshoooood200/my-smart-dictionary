@@ -996,6 +996,71 @@ export function AdminDashboard() {
     }
   }
 
+  // إعادة ترتيب الفئات - يعيد تعيين قيم الترتيب لجميع الفئات
+  const handleReorderCategories = async (categoryId: string, direction: 'up' | 'down', type: 'kids' | 'adults') => {
+    const allCategories = getFilteredCategories(type)
+    const currentIndex = allCategories.findIndex(c => c.id === categoryId)
+    
+    if (currentIndex === -1) return
+    if (direction === 'up' && currentIndex === 0) return
+    if (direction === 'down' && currentIndex === allCategories.length - 1) return
+    
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    
+    // إنشاء نسخة جديدة من الفئات مع التبديل
+    const newOrder = [...allCategories]
+    const [removed] = newOrder.splice(currentIndex, 1)
+    newOrder.splice(newIndex, 0, removed)
+    
+    try {
+      // التأكد من وجود جميع الفئات في قاعدة البيانات
+      for (const cat of newOrder) {
+        if (!cat.existsInDb) {
+          await ensureCategoryInDb(cat, type)
+        }
+      }
+      
+      // تحديث الترتيب لجميع الفئات
+      const updates = newOrder.map((cat, index) => ({
+        id: cat.id,
+        order: index
+      }))
+      
+      // إرسال التحديثات بالتوازي
+      const responses = await Promise.all(
+        updates.map(item => 
+          fetch(`/api/admin/categories/${item.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order: item.order })
+          })
+        )
+      )
+      
+      const allOk = responses.every(r => r.ok)
+      
+      if (allOk) {
+        // تحديث محلي فوري
+        setCategories(prevCategories => {
+          const updatedCategories = [...prevCategories]
+          updates.forEach(update => {
+            const catIndex = updatedCategories.findIndex(c => c.id === update.id)
+            if (catIndex !== -1) {
+              updatedCategories[catIndex] = { ...updatedCategories[catIndex], order: update.order }
+            }
+          })
+          return updatedCategories
+        })
+        toast.success('تم تحديث الترتيب')
+      } else {
+        toast.error('حدث خطأ في تحديث الترتيب')
+      }
+    } catch (error) {
+      console.error('Error reordering categories:', error)
+      toast.error('حدث خطأ في تحديث الترتيب')
+    }
+  }
+
   const getFilteredLessons = (level: 'beginner' | 'advanced') => {
     return lessons.filter(l => {
       const match = level === 'beginner'
@@ -1409,36 +1474,8 @@ export function AdminDashboard() {
                                   variant="ghost"
                                   size="icon"
                                   className="w-6 h-6"
-                                  onClick={async () => {
-                                    const allCats = getFilteredCategories('kids')
-                                    if (index > 0) {
-                                      const prevCat = allCats[index - 1]
-                                      try {
-                                        // Ensure both categories exist in DB
-                                        if (!category.existsInDb) {
-                                          await ensureCategoryInDb(category, 'kids')
-                                        }
-                                        if (!prevCat.existsInDb) {
-                                          await ensureCategoryInDb(prevCat, 'kids')
-                                        }
-                                        await fetch(`/api/admin/categories/${category.id}`, {
-                                          method: 'PUT',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ order: prevCat.order })
-                                        })
-                                        await fetch(`/api/admin/categories/${prevCat.id}`, {
-                                          method: 'PUT',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ order: category.order })
-                                        })
-                                        hasFetchedData.current = false
-                                        fetchAllData()
-                                        toast.success('تم تحديث الترتيب')
-                                      } catch (error) {
-                                        toast.error('حدث خطأ')
-                                      }
-                                    }
-                                  }}
+                                  disabled={index === 0}
+                                  onClick={() => handleReorderCategories(category.id, 'up', 'kids')}
                                 >
                                   <ArrowUp className="w-3 h-3" />
                                 </Button>
@@ -1446,36 +1483,8 @@ export function AdminDashboard() {
                                   variant="ghost"
                                   size="icon"
                                   className="w-6 h-6"
-                                  onClick={async () => {
-                                    const allCats = getFilteredCategories('kids')
-                                    if (index < allCats.length - 1) {
-                                      const nextCat = allCats[index + 1]
-                                      try {
-                                        // Ensure both categories exist in DB
-                                        if (!category.existsInDb) {
-                                          await ensureCategoryInDb(category, 'kids')
-                                        }
-                                        if (!nextCat.existsInDb) {
-                                          await ensureCategoryInDb(nextCat, 'kids')
-                                        }
-                                        await fetch(`/api/admin/categories/${category.id}`, {
-                                          method: 'PUT',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ order: nextCat.order })
-                                        })
-                                        await fetch(`/api/admin/categories/${nextCat.id}`, {
-                                          method: 'PUT',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ order: category.order })
-                                        })
-                                        hasFetchedData.current = false
-                                        fetchAllData()
-                                        toast.success('تم تحديث الترتيب')
-                                      } catch (error) {
-                                        toast.error('حدث خطأ')
-                                      }
-                                    }
-                                  }}
+                                  disabled={index === getFilteredCategories('kids').length - 1}
+                                  onClick={() => handleReorderCategories(category.id, 'down', 'kids')}
                                 >
                                   <ArrowDown className="w-3 h-3" />
                                 </Button>
@@ -1924,36 +1933,8 @@ export function AdminDashboard() {
                                   variant="ghost"
                                   size="icon"
                                   className="w-6 h-6"
-                                  onClick={async () => {
-                                    const allCats = getFilteredCategories('adults')
-                                    if (index > 0) {
-                                      const prevCat = allCats[index - 1]
-                                      try {
-                                        // Ensure both categories exist in DB
-                                        if (!category.existsInDb) {
-                                          await ensureCategoryInDb(category, 'adults')
-                                        }
-                                        if (!prevCat.existsInDb) {
-                                          await ensureCategoryInDb(prevCat, 'adults')
-                                        }
-                                        await fetch(`/api/admin/categories/${category.id}`, {
-                                          method: 'PUT',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ order: prevCat.order })
-                                        })
-                                        await fetch(`/api/admin/categories/${prevCat.id}`, {
-                                          method: 'PUT',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ order: category.order })
-                                        })
-                                        hasFetchedData.current = false
-                                        fetchAllData()
-                                        toast.success('تم تحديث الترتيب')
-                                      } catch (error) {
-                                        toast.error('حدث خطأ')
-                                      }
-                                    }
-                                  }}
+                                  disabled={index === 0}
+                                  onClick={() => handleReorderCategories(category.id, 'up', 'adults')}
                                 >
                                   <ArrowUp className="w-3 h-3" />
                                 </Button>
@@ -1961,36 +1942,8 @@ export function AdminDashboard() {
                                   variant="ghost"
                                   size="icon"
                                   className="w-6 h-6"
-                                  onClick={async () => {
-                                    const allCats = getFilteredCategories('adults')
-                                    if (index < allCats.length - 1) {
-                                      const nextCat = allCats[index + 1]
-                                      try {
-                                        // Ensure both categories exist in DB
-                                        if (!category.existsInDb) {
-                                          await ensureCategoryInDb(category, 'adults')
-                                        }
-                                        if (!nextCat.existsInDb) {
-                                          await ensureCategoryInDb(nextCat, 'adults')
-                                        }
-                                        await fetch(`/api/admin/categories/${category.id}`, {
-                                          method: 'PUT',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ order: nextCat.order })
-                                        })
-                                        await fetch(`/api/admin/categories/${nextCat.id}`, {
-                                          method: 'PUT',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ order: category.order })
-                                        })
-                                        hasFetchedData.current = false
-                                        fetchAllData()
-                                        toast.success('تم تحديث الترتيب')
-                                      } catch (error) {
-                                        toast.error('حدث خطأ')
-                                      }
-                                    }
-                                  }}
+                                  disabled={index === getFilteredCategories('adults').length - 1}
+                                  onClick={() => handleReorderCategories(category.id, 'down', 'adults')}
                                 >
                                   <ArrowDown className="w-3 h-3" />
                                 </Button>
