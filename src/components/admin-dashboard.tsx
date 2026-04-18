@@ -830,7 +830,41 @@ export function AdminDashboard() {
         return match && (v.titleAr.includes(searchQuery) || v.title.toLowerCase().includes(searchQuery.toLowerCase()))
       }
       return match
-    })
+    }).sort((a, b) => (a.order || 0) - (b.order || 0))
+  }
+
+  // إعادة ترتيب الفيديوهات
+  const handleReorderVideos = async (videoId: string, direction: 'up' | 'down', ageGroup: 'kids' | 'adults') => {
+    const allVideos = getFilteredVideos(ageGroup)
+    const currentIndex = allVideos.findIndex(v => v.id === videoId)
+    
+    if (direction === 'up' && currentIndex === 0) return
+    if (direction === 'down' && currentIndex === allVideos.length - 1) return
+    
+    const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    const currentVideo = allVideos[currentIndex]
+    const swapVideo = allVideos[swapIndex]
+    
+    try {
+      // تبديل الترتيب
+      await fetch(`/api/admin/videos/${currentVideo.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: swapVideo.order || swapIndex })
+      })
+      await fetch(`/api/admin/videos/${swapVideo.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: currentVideo.order || currentIndex })
+      })
+      
+      hasFetchedData.current = false
+      await fetchAllData()
+      toast.success('تم تحديث الترتيب')
+    } catch (error) {
+      console.error('Error reordering videos:', error)
+      toast.error('حدث خطأ في تحديث الترتيب')
+    }
   }
 
   const getFilteredLessons = (level: 'beginner' | 'advanced') => {
@@ -1427,51 +1461,78 @@ export function AdminDashboard() {
                       <p>لا توجد فيديوهات للأشبال</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {getFilteredVideos('kids').map((video) => (
+                    <div className="space-y-2">
+                      {getFilteredVideos('kids').map((video, index, videosArray) => (
                         <Card key={video.id} className="overflow-hidden group">
-                          <div className="aspect-video relative bg-gray-100 dark:bg-gray-800">
-                            {video.thumbnail ? (
-                              <img src={video.thumbnail} alt={video.titleAr} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-400 to-orange-500">
-                                <Video className="w-8 h-8 text-white opacity-50" />
+                          <div className="flex items-center gap-4 p-3">
+                            {/* أزرار الترتيب */}
+                            <div className="flex flex-col gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-7 h-7"
+                                disabled={index === 0}
+                                onClick={() => handleReorderVideos(video.id, 'up', 'kids')}
+                              >
+                                <ArrowUp className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-7 h-7"
+                                disabled={index === videosArray.length - 1}
+                                onClick={() => handleReorderVideos(video.id, 'down', 'kids')}
+                              >
+                                <ArrowDown className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            
+                            {/* صورة الفيديو */}
+                            <div className="w-32 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                              {video.thumbnail ? (
+                                <img src={video.thumbnail} alt={video.titleAr} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-400 to-orange-500">
+                                  <Video className="w-6 h-6 text-white opacity-50" />
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* معلومات الفيديو */}
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-sm truncate">{video.titleAr}</h4>
+                              <p className="text-xs text-gray-500 truncate">{video.title}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs">{video.category}</Badge>
+                                <span className="text-xs text-gray-400">{formatDuration(video.duration)}</span>
                               </div>
-                            )}
-                            <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 rounded text-white text-xs">
-                              {formatDuration(video.duration)}
+                            </div>
+                            
+                            {/* أزرار التعديل والحذف */}
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-8 h-8"
+                                onClick={() => {
+                                  setVideoForm(video)
+                                  setEditingItem(video)
+                                  setEditingType('video')
+                                  setShowAddDialog(true)
+                                }}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-8 h-8 text-rose-500"
+                                onClick={() => handleDeleteVideo(video.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
                             </div>
                           </div>
-                          <CardContent className="p-3">
-                            <h4 className="font-medium text-sm truncate">{video.titleAr}</h4>
-                            <p className="text-xs text-gray-500 truncate">{video.title}</p>
-                            <div className="flex items-center justify-between mt-2">
-                              <Badge variant="outline" className="text-xs">{video.category}</Badge>
-                              <div className="flex gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="w-6 h-6"
-                                  onClick={() => {
-                                    setVideoForm(video)
-                                    setEditingItem(video)
-                                    setEditingType('video')
-                                    setShowAddDialog(true)
-                                  }}
-                                >
-                                  <Edit className="w-3 h-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="w-6 h-6 text-rose-500"
-                                  onClick={() => handleDeleteVideo(video.id)}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
                         </Card>
                       ))}
                     </div>
@@ -1900,51 +1961,81 @@ export function AdminDashboard() {
                       <p>لا توجد فيديوهات للكبار</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {getFilteredVideos('adults').map((video) => (
+                    <div className="space-y-2">
+                      {getFilteredVideos('adults').map((video, index, videosArray) => (
                         <Card key={video.id} className="overflow-hidden group">
-                          <div className="aspect-video relative bg-gray-100 dark:bg-gray-800">
-                            {video.thumbnail ? (
-                              <img src={video.thumbnail} alt={video.titleAr} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600">
-                                <Video className="w-8 h-8 text-white opacity-50" />
-                              </div>
-                            )}
-                            <Badge className="absolute top-2 right-2 bg-indigo-600 text-white text-[10px]">
-                              {video.difficulty === 'expert' ? 'خبير' : video.difficulty === 'hard' ? 'صعب' : 'متوسط'}
-                            </Badge>
-                          </div>
-                          <CardContent className="p-3">
-                            <h4 className="font-medium text-sm truncate">{video.titleAr}</h4>
-                            <p className="text-xs text-gray-500 truncate">{video.title}</p>
-                            <div className="flex items-center justify-between mt-2">
-                              <Badge variant="outline" className="text-xs">{video.category}</Badge>
-                              <div className="flex gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="w-6 h-6"
-                                  onClick={() => {
-                                    setVideoForm(video)
-                                    setEditingItem(video)
-                                    setEditingType('video')
-                                    setShowAddDialog(true)
-                                  }}
-                                >
-                                  <Edit className="w-3 h-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="w-6 h-6 text-rose-500"
-                                  onClick={() => handleDeleteVideo(video.id)}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
+                          <div className="flex items-center gap-4 p-3">
+                            {/* أزرار الترتيب */}
+                            <div className="flex flex-col gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-7 h-7"
+                                disabled={index === 0}
+                                onClick={() => handleReorderVideos(video.id, 'up', 'adults')}
+                              >
+                                <ArrowUp className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-7 h-7"
+                                disabled={index === videosArray.length - 1}
+                                onClick={() => handleReorderVideos(video.id, 'down', 'adults')}
+                              >
+                                <ArrowDown className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            
+                            {/* صورة الفيديو */}
+                            <div className="w-32 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                              {video.thumbnail ? (
+                                <img src={video.thumbnail} alt={video.titleAr} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600">
+                                  <Video className="w-6 h-6 text-white opacity-50" />
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* معلومات الفيديو */}
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-sm truncate">{video.titleAr}</h4>
+                              <p className="text-xs text-gray-500 truncate">{video.title}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs">{video.category}</Badge>
+                                <Badge className="bg-indigo-100 text-indigo-700 text-[10px]">
+                                  {video.difficulty === 'expert' ? 'خبير' : video.difficulty === 'hard' ? 'صعب' : 'متوسط'}
+                                </Badge>
+                                <span className="text-xs text-gray-400">{formatDuration(video.duration)}</span>
                               </div>
                             </div>
-                          </CardContent>
+                            
+                            {/* أزرار التعديل والحذف */}
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-8 h-8"
+                                onClick={() => {
+                                  setVideoForm(video)
+                                  setEditingItem(video)
+                                  setEditingType('video')
+                                  setShowAddDialog(true)
+                                }}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-8 h-8 text-rose-500"
+                                onClick={() => handleDeleteVideo(video.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
                         </Card>
                       ))}
                     </div>
