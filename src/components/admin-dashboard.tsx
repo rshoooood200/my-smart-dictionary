@@ -848,37 +848,44 @@ export function AdminDashboard() {
     if (direction === 'up' && currentIndex === 0) return
     if (direction === 'down' && currentIndex === allVideos.length - 1) return
     
-    const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
-    const currentVideo = allVideos[currentIndex]
-    const swapVideo = allVideos[swapIndex]
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    
+    // إنشاء نسخة جديدة من الفيديوهات مع التبديل
+    const newOrder = [...allVideos]
+    const [removed] = newOrder.splice(currentIndex, 1)
+    newOrder.splice(newIndex, 0, removed)
     
     try {
-      // تعيين قيم الترتيب الجديدة
-      const currentOrder = currentVideo.order ?? currentIndex
-      const swapOrder = swapVideo.order ?? swapIndex
+      // تحديث الترتيب لجميع الفيديوهات المتأثرة
+      const updates = newOrder.map((video, index) => ({
+        id: video.id,
+        order: index
+      }))
       
-      // تحديث الفيديو الحالي
-      const response1 = await fetch(`/api/admin/videos/${currentVideo.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order: swapOrder })
-      })
-      
-      // تحديث الفيديو المتبادل
-      const response2 = await fetch(`/api/admin/videos/${swapVideo.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order: currentOrder })
-      })
-      
-      if (response1.ok && response2.ok) {
-        // تحديث محلي فوري لتجنب انتظار إعادة التحميل
-        setVideos(prevVideos => {
-          return prevVideos.map(v => {
-            if (v.id === currentVideo.id) return { ...v, order: swapOrder }
-            if (v.id === swapVideo.id) return { ...v, order: currentOrder }
-            return v
+      // إرسال التحديثات بالتوازي
+      const responses = await Promise.all(
+        updates.map(item => 
+          fetch(`/api/admin/videos/${item.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order: item.order })
           })
+        )
+      )
+      
+      const allOk = responses.every(r => r.ok)
+      
+      if (allOk) {
+        // تحديث محلي فوري
+        setVideos(prevVideos => {
+          const updatedVideos = [...prevVideos]
+          updates.forEach(update => {
+            const videoIndex = updatedVideos.findIndex(v => v.id === update.id)
+            if (videoIndex !== -1) {
+              updatedVideos[videoIndex] = { ...updatedVideos[videoIndex], order: update.order }
+            }
+          })
+          return updatedVideos
         })
         toast.success('تم تحديث الترتيب')
       } else {
