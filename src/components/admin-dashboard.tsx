@@ -2842,7 +2842,7 @@ export function AdminDashboard() {
                       <>
                         <FileIcon className="w-12 h-12 mx-auto text-gray-400 mb-3" />
                         <p className="text-gray-600 dark:text-gray-400 mb-2">ارفع كتاب PDF</p>
-                        <p className="text-xs text-gray-500 mb-3">الحد الأقصى 5 ميجابايت</p>
+                        <p className="text-xs text-gray-500 mb-3">الحد الأقصى 50 ميجابايت</p>
                         <input
                           type="file"
                           accept=".pdf"
@@ -2857,8 +2857,8 @@ export function AdminDashboard() {
                               return
                             }
 
-                            if (file.size > 5 * 1024 * 1024) {
-                              toast.error('حجم الملف يجب أن لا يتجاوز 5 ميجابايت')
+                            if (file.size > 50 * 1024 * 1024) {
+                              toast.error('حجم الملف يجب أن لا يتجاوز 50 ميجابايت')
                               return
                             }
 

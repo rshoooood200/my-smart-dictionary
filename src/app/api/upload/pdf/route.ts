@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { put } from '@vercel/blob';
 
-// Upload PDF - Simple base64 storage for now
+// Upload PDF using Vercel Blob Storage
 export async function POST(req: NextRequest) {
   console.log('PDF Upload: Starting...');
 
@@ -33,34 +34,65 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check file size (max 5MB for base64 storage)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    // Check file size (max 50MB)
+    const maxSize = 50 * 1024 * 1024; // 50MB
     if (file.size > maxSize) {
       console.log('PDF Upload: File too large:', file.size);
       return NextResponse.json(
-        { error: 'حجم الملف يجب أن لا يتجاوز 5 ميجابايت' },
+        { error: 'حجم الملف يجب أن لا يتجاوز 50 ميجابايت' },
         { status: 400 }
       );
     }
 
-    console.log('PDF Upload: Converting to base64...');
+    // Check if BLOB token is available
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    
+    if (blobToken) {
+      // Use Vercel Blob Storage
+      console.log('PDF Upload: Uploading to Vercel Blob...');
 
-    // Convert to base64
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const base64 = buffer.toString('base64');
-    const dataUrl = `data:application/pdf;base64,${base64}`;
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+      const fileName = `pdfs/${timestamp}-${randomId}-${file.name}`;
 
-    console.log('PDF Upload: Success, base64 length:', dataUrl.length);
+      const blob = await put(fileName, file, {
+        access: 'public',
+        contentType: 'application/pdf',
+      });
 
-    return NextResponse.json({
-      success: true,
-      pdfUrl: dataUrl,
-      pdfTitle: title || file.name.replace('.pdf', ''),
-      pdfTitleAr: titleAr || title || file.name.replace('.pdf', ''),
-      pdfSize: file.size,
-      pdfPages: 0,
-    });
+      console.log('PDF Upload: Success!', {
+        url: blob.url,
+        size: file.size
+      });
+
+      return NextResponse.json({
+        success: true,
+        pdfUrl: blob.url,
+        pdfTitle: title || file.name.replace('.pdf', ''),
+        pdfTitleAr: titleAr || title || file.name.replace('.pdf', ''),
+        pdfSize: file.size,
+        pdfPages: 0,
+      });
+    } else {
+      // Fallback to base64 for local development
+      console.log('PDF Upload: No BLOB token, using base64 fallback...');
+
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const base64 = buffer.toString('base64');
+      const dataUrl = `data:application/pdf;base64,${base64}`;
+
+      console.log('PDF Upload: Success (base64), length:', dataUrl.length);
+
+      return NextResponse.json({
+        success: true,
+        pdfUrl: dataUrl,
+        pdfTitle: title || file.name.replace('.pdf', ''),
+        pdfTitleAr: titleAr || title || file.name.replace('.pdf', ''),
+        pdfSize: file.size,
+        pdfPages: 0,
+      });
+    }
   } catch (error) {
     console.error('PDF Upload Error:', error);
     return NextResponse.json(
