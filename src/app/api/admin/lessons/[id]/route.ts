@@ -9,23 +9,38 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { title, titleAr, description, descriptionAr, content, contentAr, category, level, order, duration, isActive } = body
+    const {
+      title, titleAr, description, descriptionAr, content, contentAr,
+      category, level, order, duration, isActive,
+      // PDF fields
+      pdfUrl, pdfTitle, pdfTitleAr, pdfPages, isPdfLesson
+    } = body
+
+    // Build update data object with only provided fields
+    const updateData: Record<string, any> = {}
+
+    if (title !== undefined) updateData.title = title
+    if (titleAr !== undefined) updateData.titleAr = titleAr
+    if (description !== undefined) updateData.description = description
+    if (descriptionAr !== undefined) updateData.descriptionAr = descriptionAr
+    if (content !== undefined) updateData.content = content
+    if (contentAr !== undefined) updateData.contentAr = contentAr
+    if (category !== undefined) updateData.category = category
+    if (level !== undefined) updateData.level = level
+    if (order !== undefined) updateData.order = order
+    if (duration !== undefined) updateData.duration = duration
+    if (isActive !== undefined) updateData.isActive = isActive
+
+    // PDF fields
+    if (pdfUrl !== undefined) updateData.pdfUrl = pdfUrl
+    if (pdfTitle !== undefined) updateData.pdfTitle = pdfTitle
+    if (pdfTitleAr !== undefined) updateData.pdfTitleAr = pdfTitleAr
+    if (pdfPages !== undefined) updateData.pdfPages = pdfPages
+    if (isPdfLesson !== undefined) updateData.isPdfLesson = isPdfLesson
 
     const lesson = await prisma.adminLesson.update({
       where: { id },
-      data: {
-        title,
-        titleAr,
-        description,
-        descriptionAr,
-        content,
-        contentAr,
-        category,
-        level,
-        order,
-        duration,
-        isActive
-      }
+      data: updateData
     })
 
     return NextResponse.json(lesson)

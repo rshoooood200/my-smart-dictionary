@@ -19,10 +19,20 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { title, titleAr, description, descriptionAr, content, contentAr, category, level, order, duration, isActive } = body
+    const {
+      title, titleAr, description, descriptionAr, content, contentAr,
+      category, level, order, duration, isActive,
+      // PDF fields
+      pdfUrl, pdfTitle, pdfTitleAr, pdfPages, isPdfLesson
+    } = body
 
-    if (!title || !titleAr || !content || !category) {
+    if (!title || !titleAr || !category) {
       return NextResponse.json({ error: 'يرجى ملء جميع الحقول المطلوبة' }, { status: 400 })
+    }
+
+    // إذا لم يكن درس PDF، يجب أن يكون هناك محتوى
+    if (!isPdfLesson && !content) {
+      return NextResponse.json({ error: 'يرجى إضافة محتوى الدرس أو رفع ملف PDF' }, { status: 400 })
     }
 
     const lesson = await prisma.adminLesson.create({
@@ -31,13 +41,19 @@ export async function POST(request: NextRequest) {
         titleAr,
         description,
         descriptionAr,
-        content,
+        content: content || '',
         contentAr,
         category,
         level: level || 'beginner',
         order: order || 0,
         duration: duration || 15,
-        isActive: isActive ?? true
+        isActive: isActive ?? true,
+        // PDF fields
+        pdfUrl: pdfUrl || null,
+        pdfTitle: pdfTitle || null,
+        pdfTitleAr: pdfTitleAr || null,
+        pdfPages: pdfPages || 0,
+        isPdfLesson: isPdfLesson || false
       }
     })
 

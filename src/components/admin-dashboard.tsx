@@ -404,7 +404,9 @@ export function AdminDashboard() {
   const resetLessonForm = () => setLessonForm({
     title: '', titleAr: '', description: '', descriptionAr: '',
     content: '', contentAr: '', category: 'general', level: 'beginner',
-    order: 0, duration: 15, isActive: true
+    order: 0, duration: 15, isActive: true,
+    // PDF fields
+    pdfUrl: '', pdfTitle: '', pdfTitleAr: '', pdfPages: 0, isPdfLesson: false
   })
 
   const resetCategoryForm = () => setCategoryForm({
@@ -510,18 +512,25 @@ export function AdminDashboard() {
   }
 
   const handleSaveLesson = async () => {
-    if (!lessonForm.title || !lessonForm.titleAr || !lessonForm.content || !lessonForm.category) {
+    // إذا كان درس PDF، لا نحتاج content عادي
+    const isPdfLesson = lessonForm.isPdfLesson || lessonForm.pdfUrl
+    if (!lessonForm.title || !lessonForm.titleAr || !lessonForm.category) {
       toast.error('يرجى ملء جميع الحقول المطلوبة')
       return
     }
-    
+
+    if (!isPdfLesson && !lessonForm.content) {
+      toast.error('يرجى إضافة محتوى الدرس أو رفع ملف PDF')
+      return
+    }
+
     setIsSaving(true)
-    
+
     try {
       const isEditing = editingItem && editingType === 'lesson'
       const url = isEditing ? `/api/admin/lessons/${editingItem.id}` : '/api/admin/lessons'
       const method = isEditing ? 'PUT' : 'POST'
-      
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -530,13 +539,19 @@ export function AdminDashboard() {
           titleAr: lessonForm.titleAr,
           description: lessonForm.description,
           descriptionAr: lessonForm.descriptionAr,
-          content: lessonForm.content,
+          content: lessonForm.content || '',
           contentAr: lessonForm.contentAr,
           category: lessonForm.category,
           level: lessonForm.level || 'beginner',
           order: lessonForm.order || 0,
           duration: lessonForm.duration || 15,
-          isActive: lessonForm.isActive ?? true
+          isActive: lessonForm.isActive ?? true,
+          // PDF fields
+          pdfUrl: lessonForm.pdfUrl || null,
+          pdfTitle: lessonForm.pdfTitle || null,
+          pdfTitleAr: lessonForm.pdfTitleAr || null,
+          pdfPages: lessonForm.pdfPages || 0,
+          isPdfLesson: isPdfLesson
         })
       })
       
