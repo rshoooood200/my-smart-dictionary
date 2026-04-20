@@ -12,7 +12,7 @@ export async function PUT(
     const {
       title, titleAr, description, descriptionAr, content, contentAr,
       category, level, order, duration, isActive,
-      // PDF fields
+      // PDF fields - نخزنها في حقول موجودة
       pdfUrl, pdfTitle, pdfTitleAr, pdfPages, isPdfLesson
     } = body
 
@@ -21,29 +21,41 @@ export async function PUT(
 
     if (title !== undefined) updateData.title = title
     if (titleAr !== undefined) updateData.titleAr = titleAr
-    if (description !== undefined) updateData.description = description
-    if (descriptionAr !== undefined) updateData.descriptionAr = descriptionAr
-    if (content !== undefined) updateData.content = content
-    if (contentAr !== undefined) updateData.contentAr = contentAr
     if (category !== undefined) updateData.category = category
     if (level !== undefined) updateData.level = level
     if (order !== undefined) updateData.order = order
     if (duration !== undefined) updateData.duration = duration
     if (isActive !== undefined) updateData.isActive = isActive
 
-    // PDF fields
-    if (pdfUrl !== undefined) updateData.pdfUrl = pdfUrl
-    if (pdfTitle !== undefined) updateData.pdfTitle = pdfTitle
-    if (pdfTitleAr !== undefined) updateData.pdfTitleAr = pdfTitleAr
-    if (pdfPages !== undefined) updateData.pdfPages = pdfPages
-    if (isPdfLesson !== undefined) updateData.isPdfLesson = isPdfLesson
+    // تخزين بيانات PDF في حقول موجودة
+    if (isPdfLesson) {
+      if (pdfUrl !== undefined) updateData.content = `[PDF]${pdfUrl}`
+      if (pdfTitle !== undefined) updateData.description = pdfTitle
+      if (pdfTitleAr !== undefined) updateData.descriptionAr = pdfTitleAr
+    } else {
+      if (content !== undefined) updateData.content = content
+      if (description !== undefined) updateData.description = description
+      if (descriptionAr !== undefined) updateData.descriptionAr = descriptionAr
+      if (contentAr !== undefined) updateData.contentAr = contentAr
+    }
 
     const lesson = await prisma.adminLesson.update({
       where: { id },
       data: updateData
     })
 
-    return NextResponse.json(lesson)
+    // استخراج بيانات PDF من الحقول
+    const lessonResponse: any = { ...lesson }
+    if (lesson.content?.startsWith('[PDF]')) {
+      lessonResponse.pdfUrl = lesson.content.replace('[PDF]', '')
+      lessonResponse.pdfTitle = lesson.description
+      lessonResponse.pdfTitleAr = lesson.descriptionAr
+      lessonResponse.isPdfLesson = true
+    } else {
+      lessonResponse.isPdfLesson = false
+    }
+
+    return NextResponse.json(lessonResponse)
   } catch (error) {
     console.error('Error updating admin lesson:', error)
     return NextResponse.json({ error: 'حدث خطأ في تحديث الدرس' }, { status: 500 })

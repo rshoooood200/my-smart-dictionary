@@ -8,7 +8,22 @@ export async function GET() {
       where: { isActive: true },
       orderBy: [{ order: 'asc' }, { createdAt: 'desc' }]
     })
-    return NextResponse.json(lessons)
+
+    // استخراج بيانات PDF من الحقول الموجودة
+    const lessonsWithPdf = lessons.map(lesson => {
+      const lessonData: any = { ...lesson }
+      if (lesson.content?.startsWith('[PDF]')) {
+        lessonData.pdfUrl = lesson.content.replace('[PDF]', '')
+        lessonData.pdfTitle = lesson.description
+        lessonData.pdfTitleAr = lesson.descriptionAr
+        lessonData.isPdfLesson = true
+      } else {
+        lessonData.isPdfLesson = false
+      }
+      return lessonData
+    })
+
+    return NextResponse.json(lessonsWithPdf)
   } catch (error) {
     console.error('Error fetching admin lessons:', error)
     return NextResponse.json({ error: 'حدث خطأ في جلب الدروس' }, { status: 500 })
@@ -24,7 +39,7 @@ export async function POST(request: NextRequest) {
     const {
       title, titleAr, description, descriptionAr, content, contentAr,
       category, level, order, duration, isActive,
-      // PDF fields
+      // PDF fields - نخزنها في حقول موجودة
       pdfUrl, pdfTitle, pdfTitleAr, pdfPages, isPdfLesson
     } = body
 
@@ -56,31 +71,39 @@ export async function POST(request: NextRequest) {
 
     console.log('Creating lesson in database...')
 
+    // تخزين بيانات PDF في حقول موجودة:
+    // - content: نستخدمه للمحتوى العادي أو نضع رابط PDF
+    // - description: نستخدمه لعنوان الكتاب
+    // - contentAr: نستخدمه لعنوان الكتاب بالعربية
+    const lessonData: any = {
+      title,
+      titleAr,
+      description: isPdfLesson ? pdfTitle : (description || null),
+      descriptionAr: isPdfLesson ? pdfTitleAr : (descriptionAr || null),
+      content: isPdfLesson ? `[PDF]${pdfUrl}` : (content || ''),
+      contentAr: contentAr || null,
+      category,
+      level: level || 'beginner',
+      order: order || 0,
+      duration: duration || 15,
+      isActive: isActive ?? true
+    }
+
     const lesson = await prisma.adminLesson.create({
-      data: {
-        title,
-        titleAr,
-        description: description || null,
-        descriptionAr: descriptionAr || null,
-        content: content || '',
-        contentAr: contentAr || null,
-        category,
-        level: level || 'beginner',
-        order: order || 0,
-        duration: duration || 15,
-        isActive: isActive ?? true,
-        // PDF fields
-        pdfUrl: pdfUrl || null,
-        pdfTitle: pdfTitle || null,
-        pdfTitleAr: pdfTitleAr || null,
-        pdfPages: pdfPages || 0,
-        isPdfLesson: isPdfLesson || false
-      }
+      data: lessonData
     })
 
     console.log('Lesson created successfully:', lesson.id)
 
-    return NextResponse.json(lesson)
+    // نرجع البيانات بالشكل المتوقع
+    return NextResponse.json({
+      ...lesson,
+      // نضيف حقول PDF للرد
+      pdfUrl: isPdfLesson ? pdfUrl : null,
+      pdfTitle: isPdfLesson ? pdfTitle : null,
+      pdfTitleAr: isPdfLesson ? pdfTitleAr : null,
+      isPdfLesson: isPdfLesson || false
+    })
   } catch (error) {
     console.error('Error creating admin lesson:', error)
     return NextResponse.json({

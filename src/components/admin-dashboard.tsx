@@ -1782,6 +1782,12 @@ export function AdminDashboard() {
                               <div className="flex gap-2 mt-2">
                                 <Badge variant="outline">{lesson.category}</Badge>
                                 <Badge variant="outline">{lesson.duration} دقيقة</Badge>
+                                {lesson.isPdfLesson && (
+                                  <Badge variant="outline" className="text-rose-500 border-rose-300">
+                                    <FileIcon className="w-3 h-3 ml-1" />
+                                    PDF
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                             <div className="flex gap-2">
@@ -1789,7 +1795,14 @@ export function AdminDashboard() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => {
-                                  setLessonForm(lesson)
+                                  // استخراج بيانات PDF من الحقول
+                                  const formData: any = { ...lesson }
+                                  if (lesson.isPdfLesson) {
+                                    formData.pdfUrl = lesson.pdfUrl
+                                    formData.pdfTitle = lesson.pdfTitle
+                                    formData.pdfTitleAr = lesson.pdfTitleAr
+                                  }
+                                  setLessonForm(formData)
                                   setEditingItem(lesson)
                                   setEditingType('lesson')
                                   setShowAddDialog(true)
@@ -2245,6 +2258,12 @@ export function AdminDashboard() {
                                 <Badge variant="outline">{lesson.category}</Badge>
                                 <Badge variant="outline">{lesson.level}</Badge>
                                 <Badge variant="outline">{lesson.duration} دقيقة</Badge>
+                                {lesson.isPdfLesson && (
+                                  <Badge variant="outline" className="text-rose-500 border-rose-300">
+                                    <FileIcon className="w-3 h-3 ml-1" />
+                                    PDF
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                             <div className="flex gap-2">
@@ -2252,7 +2271,14 @@ export function AdminDashboard() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => {
-                                  setLessonForm(lesson)
+                                  // استخراج بيانات PDF من الحقول
+                                  const formData: any = { ...lesson }
+                                  if (lesson.isPdfLesson) {
+                                    formData.pdfUrl = lesson.pdfUrl
+                                    formData.pdfTitle = lesson.pdfTitle
+                                    formData.pdfTitleAr = lesson.pdfTitleAr
+                                  }
+                                  setLessonForm(formData)
                                   setEditingItem(lesson)
                                   setEditingType('lesson')
                                   setShowAddDialog(true)
