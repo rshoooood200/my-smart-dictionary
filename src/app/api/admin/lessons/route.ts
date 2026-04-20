@@ -19,6 +19,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log('Received lesson data:', JSON.stringify(body, null, 2))
+
     const {
       title, titleAr, description, descriptionAr, content, contentAr,
       category, level, order, duration, isActive,
@@ -26,23 +28,42 @@ export async function POST(request: NextRequest) {
       pdfUrl, pdfTitle, pdfTitleAr, pdfPages, isPdfLesson
     } = body
 
+    console.log('Extracted fields:', {
+      title: !!title,
+      titleAr: !!titleAr,
+      category: !!category,
+      content: !!content,
+      isPdfLesson,
+      pdfUrl: !!pdfUrl
+    })
+
     if (!title || !titleAr || !category) {
-      return NextResponse.json({ error: 'يرجى ملء جميع الحقول المطلوبة' }, { status: 400 })
+      console.log('Validation failed: missing required fields')
+      return NextResponse.json({
+        error: 'يرجى ملء جميع الحقول المطلوبة',
+        details: { title: !!title, titleAr: !!titleAr, category: !!category }
+      }, { status: 400 })
     }
 
     // إذا لم يكن درس PDF، يجب أن يكون هناك محتوى
     if (!isPdfLesson && !content) {
-      return NextResponse.json({ error: 'يرجى إضافة محتوى الدرس أو رفع ملف PDF' }, { status: 400 })
+      console.log('Validation failed: no content or PDF')
+      return NextResponse.json({
+        error: 'يرجى إضافة محتوى الدرس أو رفع ملف PDF',
+        details: { isPdfLesson, hasContent: !!content }
+      }, { status: 400 })
     }
+
+    console.log('Creating lesson in database...')
 
     const lesson = await prisma.adminLesson.create({
       data: {
         title,
         titleAr,
-        description,
-        descriptionAr,
+        description: description || null,
+        descriptionAr: descriptionAr || null,
         content: content || '',
-        contentAr,
+        contentAr: contentAr || null,
         category,
         level: level || 'beginner',
         order: order || 0,
@@ -57,9 +78,14 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    console.log('Lesson created successfully:', lesson.id)
+
     return NextResponse.json(lesson)
   } catch (error) {
     console.error('Error creating admin lesson:', error)
-    return NextResponse.json({ error: 'حدث خطأ في إنشاء الدرس' }, { status: 500 })
+    return NextResponse.json({
+      error: 'حدث خطأ في إنشاء الدرس',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }

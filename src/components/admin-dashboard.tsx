@@ -513,9 +513,19 @@ export function AdminDashboard() {
 
   const handleSaveLesson = async () => {
     // إذا كان درس PDF، لا نحتاج content عادي
-    const isPdfLesson = lessonForm.isPdfLesson || lessonForm.pdfUrl
+    const isPdfLesson = lessonForm.isPdfLesson || !!lessonForm.pdfUrl
+
+    console.log('Saving lesson:', {
+      title: lessonForm.title,
+      titleAr: lessonForm.titleAr,
+      category: lessonForm.category,
+      isPdfLesson,
+      pdfUrl: lessonForm.pdfUrl ? 'exists' : 'none',
+      content: lessonForm.content ? 'exists' : 'empty'
+    })
+
     if (!lessonForm.title || !lessonForm.titleAr || !lessonForm.category) {
-      toast.error('يرجى ملء جميع الحقول المطلوبة')
+      toast.error('يرجى ملء جميع الحقول المطلوبة: العنوان والعنوان بالعربية والفئة')
       return
     }
 
@@ -531,31 +541,39 @@ export function AdminDashboard() {
       const url = isEditing ? `/api/admin/lessons/${editingItem.id}` : '/api/admin/lessons'
       const method = isEditing ? 'PUT' : 'POST'
 
+      const requestBody = {
+        title: lessonForm.title,
+        titleAr: lessonForm.titleAr,
+        description: lessonForm.description,
+        descriptionAr: lessonForm.descriptionAr,
+        content: lessonForm.content || '',
+        contentAr: lessonForm.contentAr,
+        category: lessonForm.category,
+        level: lessonForm.level || 'beginner',
+        order: lessonForm.order || 0,
+        duration: lessonForm.duration || 15,
+        isActive: lessonForm.isActive ?? true,
+        // PDF fields
+        pdfUrl: lessonForm.pdfUrl || null,
+        pdfTitle: lessonForm.pdfTitle || null,
+        pdfTitleAr: lessonForm.pdfTitleAr || null,
+        pdfPages: lessonForm.pdfPages || 0,
+        isPdfLesson: isPdfLesson
+      }
+
+      console.log('Sending request to:', url, 'Method:', method)
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: lessonForm.title,
-          titleAr: lessonForm.titleAr,
-          description: lessonForm.description,
-          descriptionAr: lessonForm.descriptionAr,
-          content: lessonForm.content || '',
-          contentAr: lessonForm.contentAr,
-          category: lessonForm.category,
-          level: lessonForm.level || 'beginner',
-          order: lessonForm.order || 0,
-          duration: lessonForm.duration || 15,
-          isActive: lessonForm.isActive ?? true,
-          // PDF fields
-          pdfUrl: lessonForm.pdfUrl || null,
-          pdfTitle: lessonForm.pdfTitle || null,
-          pdfTitleAr: lessonForm.pdfTitleAr || null,
-          pdfPages: lessonForm.pdfPages || 0,
-          isPdfLesson: isPdfLesson
-        })
+        body: JSON.stringify(requestBody)
       })
-      
+
+      console.log('Response status:', response.status)
+
       if (response.ok) {
+        const savedLesson = await response.json()
+        console.log('Lesson saved successfully:', savedLesson)
         toast.success(isEditing ? 'تم تحديث الدرس' : 'تم إضافة الدرس')
         setShowAddDialog(false)
         setEditingItem(null)
@@ -563,12 +581,18 @@ export function AdminDashboard() {
         resetLessonForm()
         await fetchAllData()
       } else {
-        const error = await response.json()
-        toast.error(error.error || 'حدث خطأ في الحفظ')
+        const errorText = await response.text()
+        console.error('Error response:', errorText)
+        try {
+          const error = JSON.parse(errorText)
+          toast.error(error.error || 'حدث خطأ في الحفظ')
+        } catch {
+          toast.error('حدث خطأ في الحفظ: ' + errorText)
+        }
       }
     } catch (error) {
       console.error('Error saving lesson:', error)
-      toast.error('حدث خطأ في الحفظ')
+      toast.error('حدث خطأ في الحفظ: ' + (error instanceof Error ? error.message : 'خطأ غير معروف'))
     } finally {
       setIsSaving(false)
     }
@@ -2792,38 +2816,44 @@ export function AdminDashboard() {
                       <>
                         <FileIcon className="w-12 h-12 mx-auto text-gray-400 mb-3" />
                         <p className="text-gray-600 dark:text-gray-400 mb-2">ارفع كتاب PDF</p>
-                        <p className="text-xs text-gray-500 mb-3">الحد الأقصى 10 ميجابايت</p>
+                        <p className="text-xs text-gray-500 mb-3">الحد الأقصى 5 ميجابايت</p>
                         <input
                           type="file"
                           accept=".pdf"
                           onChange={async (e) => {
                             const file = e.target.files?.[0]
                             if (!file) return
-                            
+
+                            console.log('PDF selected:', file.name, file.size, file.type)
+
                             if (file.type !== 'application/pdf') {
                               toast.error('يجب أن يكون الملف بصيغة PDF')
                               return
                             }
-                            
-                            if (file.size > 10 * 1024 * 1024) {
-                              toast.error('حجم الملف يجب أن لا يتجاوز 10 ميجابايت')
+
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast.error('حجم الملف يجب أن لا يتجاوز 5 ميجابايت')
                               return
                             }
-                            
+
                             setIsSaving(true)
                             try {
                               const formData = new FormData()
                               formData.append('file', file)
                               formData.append('title', lessonForm.title || file.name.replace('.pdf', ''))
                               formData.append('titleAr', lessonForm.titleAr || file.name.replace('.pdf', ''))
-                              
+
+                              console.log('Uploading PDF...')
                               const response = await fetch('/api/upload/pdf', {
                                 method: 'POST',
                                 body: formData
                               })
-                              
+
+                              console.log('Upload response status:', response.status)
+
                               if (response.ok) {
                                 const data = await response.json()
+                                console.log('Upload success:', data)
                                 setLessonForm(prev => ({
                                   ...prev,
                                   pdfUrl: data.pdfUrl,
@@ -2835,6 +2865,7 @@ export function AdminDashboard() {
                                 toast.success('تم رفع الكتاب بنجاح!')
                               } else {
                                 const errorData = await response.json()
+                                console.error('Upload failed:', errorData)
                                 toast.error(errorData.error || 'فشل في رفع الملف')
                               }
                             } catch (error) {
