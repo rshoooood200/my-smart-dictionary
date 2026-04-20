@@ -1771,16 +1771,29 @@ export function KidsLearning({ userId }: KidsLearningProps) {
 
       {/* Lesson Dialog */}
       <Dialog open={showLessonDialog} onOpenChange={setShowLessonDialog}>
-        <DialogContent className="max-w-2xl rounded-2xl">
+        <DialogContent className="max-w-5xl h-[90vh] rounded-2xl flex flex-col">
           {selectedLesson && (
             <>
               <DialogHeader>
                 <DialogTitle className="text-xl">{selectedLesson.titleAr}</DialogTitle>
                 <DialogDescription>{selectedLesson.title}</DialogDescription>
               </DialogHeader>
-              <div className="mt-4 prose dark:prose-invert max-h-[60vh] overflow-y-auto">
-                <p className="whitespace-pre-wrap">{selectedLesson.content}</p>
-              </div>
+              
+              {/* Check if it's a PDF lesson */}
+              {selectedLesson.content?.startsWith('[PDF]') ? (
+                <div className="flex-1 min-h-0 mt-4">
+                  <iframe
+                    src={selectedLesson.content.replace('[PDF]', '')}
+                    className="w-full h-full rounded-xl border-2 border-gray-200 dark:border-gray-700"
+                    title={selectedLesson.titleAr}
+                  />
+                </div>
+              ) : (
+                <div className="mt-4 prose dark:prose-invert max-h-[60vh] overflow-y-auto">
+                  <p className="whitespace-pre-wrap">{selectedLesson.content}</p>
+                </div>
+              )}
+              
               <div className="flex gap-2 mt-4">
                 <Button 
                   onClick={() => markLessonAsWatched(selectedLesson.id)}
@@ -1789,6 +1802,16 @@ export function KidsLearning({ userId }: KidsLearningProps) {
                   <Check className="w-4 h-4 mr-2" />
                   تمت المشاهدة
                 </Button>
+                {selectedLesson.content?.startsWith('[PDF]') && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => window.open(selectedLesson.content.replace('[PDF]', ''), '_blank')}
+                    className="gap-2"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    فتح في نافذة جديدة
+                  </Button>
+                )}
               </div>
             </>
           )}
