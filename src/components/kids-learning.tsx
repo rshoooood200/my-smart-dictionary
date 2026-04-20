@@ -1805,7 +1805,23 @@ export function KidsLearning({ userId }: KidsLearningProps) {
                 {selectedLesson.content?.startsWith('[PDF]') && (
                   <Button 
                     variant="outline"
-                    onClick={() => window.open(selectedLesson.content.replace('[PDF]', ''), '_blank')}
+                    onClick={() => {
+                      const pdfData = selectedLesson.content.replace('[PDF]', '')
+                      // إذا كان base64، نحوله إلى Blob
+                      if (pdfData.startsWith('data:application/pdf')) {
+                        const base64 = pdfData.split(',')[1]
+                        const binary = atob(base64)
+                        const bytes = new Uint8Array(binary.length)
+                        for (let i = 0; i < binary.length; i++) {
+                          bytes[i] = binary.charCodeAt(i)
+                        }
+                        const blob = new Blob([bytes], { type: 'application/pdf' })
+                        const blobUrl = URL.createObjectURL(blob)
+                        window.open(blobUrl, '_blank')
+                      } else {
+                        window.open(pdfData, '_blank')
+                      }
+                    }}
                     className="gap-2"
                   >
                     <ExternalLink className="w-4 h-4" />
