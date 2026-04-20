@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
   Gamepad2, Brain, BookOpen, Plus, Edit, Trash2, Save,
-  Search, RefreshCw, Eye, EyeOff, Zap, Check, AlertCircle, Sparkles, ClipboardPaste
+  Search, RefreshCw, Eye, EyeOff, Zap, Check, AlertCircle, Sparkles, ClipboardPaste, Volume2, Loader2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -64,6 +64,7 @@ interface Flashcard {
   translation?: string
   example?: string
   imageUrl?: string
+  audioUrl?: string
   category?: string
   ageGroup?: string
   order: number
@@ -337,8 +338,10 @@ export function GamesQuizzesManager() {
   
   const [flashcardForm, setFlashcardForm] = useState<Partial<Flashcard>>({
     word: '', wordAr: '', translation: '', example: '',
-    imageUrl: '', category: 'alphabet', ageGroup: '5-7', order: 0, isActive: true
+    imageUrl: '', audioUrl: '', category: 'alphabet', ageGroup: '5-7', order: 0, isActive: true
   })
+  
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false)
 
   // Fetch data
   const fetchAllData = useCallback(async () => {
@@ -592,8 +595,38 @@ export function GamesQuizzesManager() {
   const resetFlashcardForm = () => {
     setFlashcardForm({
       word: '', wordAr: '', translation: '', example: '',
-      imageUrl: '', category: 'alphabet', ageGroup: '5-7', order: 0, isActive: true
+      imageUrl: '', audioUrl: '', category: 'alphabet', ageGroup: '5-7', order: 0, isActive: true
     })
+  }
+  
+  // Generate audio for flashcard using TTS
+  const handleGenerateAudio = async () => {
+    if (!flashcardForm.word) {
+      toast.error('الرجاء إدخال الكلمة أولاً')
+      return
+    }
+    
+    setIsGeneratingAudio(true)
+    try {
+      const response = await fetch(`/api/tts?text=${encodeURIComponent(flashcardForm.word)}&speed=0.8`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.audioData) {
+          setFlashcardForm(prev => ({ ...prev, audioUrl: data.audioData }))
+          toast.success('تم توليد الصوت بنجاح!')
+        } else {
+          toast.error('فشل في توليد الصوت')
+        }
+      } else {
+        toast.error('فشل في توليد الصوت')
+      }
+    } catch (error) {
+      console.error('Error generating audio:', error)
+      toast.error('حدث خطأ في توليد الصوت')
+    } finally {
+      setIsGeneratingAudio(false)
+    }
   }
 
   // Filter helpers
@@ -1290,13 +1323,49 @@ export function GamesQuizzesManager() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>الكلمة بالإنجليزية *</Label>
-                <Input value={flashcardForm.word || ''} onChange={(e) => setFlashcardForm({ ...flashcardForm, word: e.target.value })} placeholder="Word" />
+                <div className="flex gap-2">
+                  <Input value={flashcardForm.word || ''} onChange={(e) => setFlashcardForm({ ...flashcardForm, word: e.target.value })} placeholder="Word" className="flex-1" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleGenerateAudio}
+                    disabled={isGeneratingAudio || !flashcardForm.word}
+                    title="توليد نطق الكلمة"
+                  >
+                    {isGeneratingAudio ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Volume2 className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>الكلمة بالعربية *</Label>
                 <Input value={flashcardForm.wordAr || ''} onChange={(e) => setFlashcardForm({ ...flashcardForm, wordAr: e.target.value })} placeholder="كلمة" />
               </div>
             </div>
+            
+            {/* Audio Preview */}
+            {flashcardForm.audioUrl && (
+              <div className="flex items-center gap-3 p-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg">
+                <Volume2 className="w-5 h-5 text-violet-500" />
+                <span className="text-sm text-gray-600 dark:text-gray-400">النطق:</span>
+                <audio controls className="h-8 flex-1">
+                  <source src={flashcardForm.audioUrl} type="audio/wav" />
+                </audio>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFlashcardForm(prev => ({ ...prev, audioUrl: '' }))}
+                  className="text-rose-500"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
             
             <div className="space-y-2">
               <Label>الترجمة</Label>

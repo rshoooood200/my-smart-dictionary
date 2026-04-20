@@ -9,7 +9,7 @@ import {
   ChevronRight, ChevronDown, ChevronUp, ExternalLink, RefreshCw, Database,
   Users, Globe, Key, LogIn, LogOut, Crown, Heart, Play, Music,
   Loader2, GripVertical, ArrowUp, ArrowDown, GraduationCap, Briefcase,
-  Baby, FolderOpen, Newspaper
+  Baby, FolderOpen, Newspaper, FileIcon
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -185,6 +185,12 @@ interface AdminLesson {
   order: number
   duration: number
   isActive: boolean
+  // PDF Book Support
+  pdfUrl?: string
+  pdfTitle?: string
+  pdfTitleAr?: string
+  pdfPages?: number
+  isPdfLesson?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -291,7 +297,8 @@ export function AdminDashboard() {
   const [lessonForm, setLessonForm] = useState<Partial<AdminLesson>>({
     title: '', titleAr: '', description: '', descriptionAr: '',
     content: '', contentAr: '', category: 'general', level: 'beginner',
-    order: 0, duration: 15, isActive: true
+    order: 0, duration: 15, isActive: true,
+    pdfUrl: '', pdfTitle: '', pdfTitleAr: '', pdfPages: 0, isPdfLesson: false
   })
   
   const [categoryForm, setCategoryForm] = useState<Partial<AdminCategory>>({
@@ -2672,15 +2679,189 @@ export function AdminDashboard() {
                 </div>
               </div>
               
-              <div>
-                <Label>المحتوى *</Label>
-                <Textarea
-                  value={lessonForm.content || ''}
-                  onChange={(e) => setLessonForm({ ...lessonForm, content: e.target.value })}
-                  placeholder="محتوى الدرس"
-                  rows={4}
-                />
+              {/* نوع الدرس */}
+              <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl">
+                <Label>نوع الدرس:</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={lessonForm.isPdfLesson ? "outline" : "default"}
+                    size="sm"
+                    onClick={() => setLessonForm({ ...lessonForm, isPdfLesson: false })}
+                    className={cn(!lessonForm.isPdfLesson && "bg-gradient-to-r from-emerald-500 to-teal-500")}
+                  >
+                    <FileText className="w-4 h-4 ml-1" />
+                    محتوى نصي
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={lessonForm.isPdfLesson ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setLessonForm({ ...lessonForm, isPdfLesson: true })}
+                    className={cn(lessonForm.isPdfLesson && "bg-gradient-to-r from-rose-500 to-pink-500")}
+                  >
+                    <FileIcon className="w-4 h-4 ml-1" />
+                    كتاب PDF
+                  </Button>
+                </div>
               </div>
+              
+              {/* محتوى نصي */}
+              {!lessonForm.isPdfLesson && (
+                <>
+                  <div>
+                    <Label>المحتوى *</Label>
+                    <Textarea
+                      value={lessonForm.content || ''}
+                      onChange={(e) => setLessonForm({ ...lessonForm, content: e.target.value })}
+                      placeholder="محتوى الدرس"
+                      rows={4}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label>المحتوى بالإنجليزية</Label>
+                    <Textarea
+                      value={lessonForm.contentAr || ''}
+                      onChange={(e) => setLessonForm({ ...lessonForm, contentAr: e.target.value })}
+                      placeholder="Content in English"
+                      rows={4}
+                    />
+                  </div>
+                </>
+              )}
+              
+              {/* رفع كتاب PDF */}
+              {lessonForm.isPdfLesson && (
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-6 text-center">
+                    {lessonForm.pdfUrl ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-center gap-3">
+                          <FileIcon className="w-8 h-8 text-rose-500" />
+                          <div className="text-right">
+                            <p className="font-medium">{lessonForm.pdfTitle || 'كتاب PDF'}</p>
+                            <p className="text-sm text-gray-500">{lessonForm.pdfTitleAr}</p>
+                          </div>
+                        </div>
+                        <div className="flex justify-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              // Open PDF in new tab for preview
+                              window.open(lessonForm.pdfUrl, '_blank')
+                            }}
+                          >
+                            <Eye className="w-4 h-4 ml-1" />
+                            معاينة
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-rose-500"
+                            onClick={() => setLessonForm({ 
+                              ...lessonForm, 
+                              pdfUrl: '', 
+                              pdfTitle: '', 
+                              pdfTitleAr: '', 
+                              pdfPages: 0 
+                            })}
+                          >
+                            <Trash2 className="w-4 h-4 ml-1" />
+                            إزالة
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <FileIcon className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                        <p className="text-gray-600 dark:text-gray-400 mb-2">ارفع كتاب PDF</p>
+                        <p className="text-xs text-gray-500 mb-3">الحد الأقصى 10 ميجابايت</p>
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            
+                            if (file.type !== 'application/pdf') {
+                              toast.error('يجب أن يكون الملف بصيغة PDF')
+                              return
+                            }
+                            
+                            if (file.size > 10 * 1024 * 1024) {
+                              toast.error('حجم الملف يجب أن لا يتجاوز 10 ميجابايت')
+                              return
+                            }
+                            
+                            setIsSaving(true)
+                            try {
+                              const formData = new FormData()
+                              formData.append('file', file)
+                              formData.append('title', lessonForm.title || file.name.replace('.pdf', ''))
+                              formData.append('titleAr', lessonForm.titleAr || file.name.replace('.pdf', ''))
+                              
+                              const response = await fetch('/api/upload/pdf', {
+                                method: 'POST',
+                                body: formData
+                              })
+                              
+                              if (response.ok) {
+                                const data = await response.json()
+                                setLessonForm(prev => ({
+                                  ...prev,
+                                  pdfUrl: data.pdfUrl,
+                                  pdfTitle: data.pdfTitle,
+                                  pdfTitleAr: data.pdfTitleAr,
+                                  pdfPages: data.pdfPages
+                                }))
+                                toast.success('تم رفع الكتاب بنجاح!')
+                              } else {
+                                toast.error('فشل في رفع الملف')
+                              }
+                            } catch (error) {
+                              console.error('Error uploading PDF:', error)
+                              toast.error('حدث خطأ في رفع الملف')
+                            } finally {
+                              setIsSaving(false)
+                            }
+                          }}
+                          className="hidden"
+                          id="pdf-upload"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => document.getElementById('pdf-upload')?.click()}
+                        >
+                          <Plus className="w-4 h-4 ml-1" />
+                          اختيار ملف PDF
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>عنوان الكتاب</Label>
+                      <Input
+                        value={lessonForm.pdfTitle || ''}
+                        onChange={(e) => setLessonForm({ ...lessonForm, pdfTitle: e.target.value })}
+                        placeholder="عنوان الكتاب"
+                      />
+                    </div>
+                    <div>
+                      <Label>عنوان الكتاب بالعربية</Label>
+                      <Input
+                        value={lessonForm.pdfTitleAr || ''}
+                        onChange={(e) => setLessonForm({ ...lessonForm, pdfTitleAr: e.target.value })}
+                        placeholder="Book Title"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
