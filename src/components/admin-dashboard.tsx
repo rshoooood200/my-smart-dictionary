@@ -296,7 +296,7 @@ export function AdminDashboard() {
   
   const [lessonForm, setLessonForm] = useState<Partial<AdminLesson>>({
     title: '', titleAr: '', description: '', descriptionAr: '',
-    content: '', contentAr: '', category: 'general', level: 'beginner',
+    content: '', contentAr: '', category: 'alphabet', level: 'beginner',
     order: 0, duration: 15, isActive: true,
     pdfUrl: '', pdfTitle: '', pdfTitleAr: '', pdfPages: 0, isPdfLesson: false
   })
@@ -403,7 +403,7 @@ export function AdminDashboard() {
 
   const resetLessonForm = () => setLessonForm({
     title: '', titleAr: '', description: '', descriptionAr: '',
-    content: '', contentAr: '', category: 'general', level: 'beginner',
+    content: '', contentAr: '', category: 'alphabet', level: 'beginner',
     order: 0, duration: 15, isActive: true,
     // PDF fields
     pdfUrl: '', pdfTitle: '', pdfTitleAr: '', pdfPages: 0, isPdfLesson: false
@@ -2829,11 +2829,13 @@ export function AdminDashboard() {
                                   pdfUrl: data.pdfUrl,
                                   pdfTitle: data.pdfTitle,
                                   pdfTitleAr: data.pdfTitleAr,
-                                  pdfPages: data.pdfPages
+                                  pdfPages: data.pdfPages,
+                                  isPdfLesson: true // Mark as PDF lesson
                                 }))
                                 toast.success('تم رفع الكتاب بنجاح!')
                               } else {
-                                toast.error('فشل في رفع الملف')
+                                const errorData = await response.json()
+                                toast.error(errorData.error || 'فشل في رفع الملف')
                               }
                             } catch (error) {
                               console.error('Error uploading PDF:', error)
