@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { upload } from '@vercel/blob/client'
 import {
   Shield, Plus, Search, Video, BookOpen, Tag, Bell, FileText,
   Settings, Trash2, Edit, X, Save, Eye, EyeOff, Lock, Unlock,
@@ -2863,40 +2864,34 @@ export function AdminDashboard() {
                             }
 
                             setIsSaving(true)
+                            toast.info('جاري رفع الملف...')
+                            
                             try {
-                              const formData = new FormData()
-                              formData.append('file', file)
-                              formData.append('title', lessonForm.title || file.name.replace('.pdf', ''))
-                              formData.append('titleAr', lessonForm.titleAr || file.name.replace('.pdf', ''))
+                              // Use Vercel Blob client-side upload
+                              const timestamp = Date.now()
+                              const randomId = Math.random().toString(36).substring(7)
+                              const cleanName = file.name.replace(/[^\w\.\-]/g, '_').substring(0, 50)
+                              const fileName = `pdfs/${timestamp}-${randomId}-${cleanName}`
 
-                              console.log('Uploading PDF...')
-                              const response = await fetch('/api/upload/pdf', {
-                                method: 'POST',
-                                body: formData
+                              const blob = await upload(fileName, file, {
+                                access: 'public',
+                                handleUploadUrl: '/api/upload-pdf-blob',
                               })
 
-                              console.log('Upload response status:', response.status)
+                              console.log('Upload success:', blob.url)
 
-                              if (response.ok) {
-                                const data = await response.json()
-                                console.log('Upload success:', data)
-                                setLessonForm(prev => ({
-                                  ...prev,
-                                  pdfUrl: data.pdfUrl,
-                                  pdfTitle: data.pdfTitle,
-                                  pdfTitleAr: data.pdfTitleAr,
-                                  pdfPages: data.pdfPages,
-                                  isPdfLesson: true // Mark as PDF lesson
-                                }))
-                                toast.success('تم رفع الكتاب بنجاح!')
-                              } else {
-                                const errorData = await response.json()
-                                console.error('Upload failed:', errorData)
-                                toast.error(errorData.error || 'فشل في رفع الملف')
-                              }
+                              setLessonForm(prev => ({
+                                ...prev,
+                                pdfUrl: blob.url,
+                                pdfTitle: lessonForm.title || file.name.replace('.pdf', ''),
+                                pdfTitleAr: lessonForm.titleAr || file.name.replace('.pdf', ''),
+                                pdfPages: 0,
+                                isPdfLesson: true
+                              }))
+                              toast.success('تم رفع الكتاب بنجاح!')
                             } catch (error) {
                               console.error('Error uploading PDF:', error)
-                              toast.error('حدث خطأ في رفع الملف')
+                              toast.error(error instanceof Error ? error.message : 'حدث خطأ في رفع الملف')
                             } finally {
                               setIsSaving(false)
                             }
