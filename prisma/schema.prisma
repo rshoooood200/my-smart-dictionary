@@ -832,13 +832,6 @@ model AdminLesson {
   duration    Int      @default(15)
   isActive    Boolean  @default(true)
   
-  // PDF Book Support
-  pdfUrl      String?  // URL for uploaded PDF file
-  pdfTitle    String?  // Title for the PDF book
-  pdfTitleAr  String?  // Arabic title for the PDF book
-  pdfPages    Int      @default(0)  // Number of pages
-  isPdfLesson Boolean  @default(false)  // Whether this is a PDF-based lesson
-  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
