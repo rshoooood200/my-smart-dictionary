@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Palette, Type, Bell, Clock, Keyboard,
   Moon, Sun, Monitor, Volume2, VolumeX,
   RefreshCw, Target, Brain, Save, RotateCcw,
-  Zap, Sliders, Eye
+  Zap, Sliders, Eye, Key, Sparkles, Check, ExternalLink
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,8 +15,10 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { useVocabStore } from '@/store/vocab-store'
 
 // الألوان المتاحة
 const PRIMARY_COLORS = [
@@ -42,6 +44,7 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
 }
 
 export function AdvancedSettings() {
+  const currentUserId = useVocabStore(state => state.currentUserId)
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system')
   const [primaryColor, setPrimaryColor] = useState('emerald')
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium')
@@ -55,6 +58,90 @@ export function AdvancedSettings() {
   const [shortcutsEnabled, setShortcutsEnabled] = useState(true)
   const [hasChanges, setHasChanges] = useState(false)
   const [activeTab, setActiveTab] = useState('appearance')
+  
+  // AI API Key state
+  const [apiKey, setApiKey] = useState('')
+  const [hasApiKey, setHasApiKey] = useState(false)
+  const [apiKeyPreview, setApiKeyPreview] = useState<string | null>(null)
+  const [isLoadingApiKey, setIsLoadingApiKey] = useState(false)
+  const [isSavingApiKey, setIsSavingApiKey] = useState(false)
+
+  // Check for existing API key on mount
+  useEffect(() => {
+    if (currentUserId) {
+      checkApiKey()
+    }
+  }, [currentUserId])
+
+  const checkApiKey = async () => {
+    if (!currentUserId) return
+    setIsLoadingApiKey(true)
+    try {
+      const res = await fetch(`/api/gemini-config?userId=${currentUserId}`)
+      const data = await res.json()
+      if (data.success) {
+        setHasApiKey(data.hasKey)
+        setApiKeyPreview(data.keyPreview)
+      }
+    } catch (error) {
+      console.error('Error checking API key:', error)
+    } finally {
+      setIsLoadingApiKey(false)
+    }
+  }
+
+  const saveApiKey = async () => {
+    if (!currentUserId) {
+      toast.error('يجب تسجيل الدخول أولاً')
+      return
+    }
+    
+    const trimmedKey = apiKey.trim()
+    if (!trimmedKey) {
+      toast.error('الرجاء إدخال مفتاح API')
+      return
+    }
+
+    if (!trimmedKey.startsWith('AIza')) {
+      toast.error('صيغة المفتاح غير صحيحة. مفاتيح Gemini تبدأ بـ "AIza"')
+      return
+    }
+
+    setIsSavingApiKey(true)
+    try {
+      const res = await fetch('/api/gemini-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUserId, apiKey: trimmedKey })
+      })
+      const data = await res.json()
+      
+      if (data.success) {
+        toast.success('تم حفظ المفتاح بنجاح! 🎉')
+        setHasApiKey(true)
+        setApiKeyPreview(data.keyPreview)
+        setApiKey('')
+      } else {
+        toast.error(data.error || 'فشل في حفظ المفتاح')
+      }
+    } catch (error) {
+      toast.error('فشل في حفظ المفتاح')
+    } finally {
+      setIsSavingApiKey(false)
+    }
+  }
+
+  const deleteApiKey = async () => {
+    if (!currentUserId) return
+    try {
+      await fetch(`/api/gemini-config?userId=${currentUserId}`, { method: 'DELETE' })
+      setHasApiKey(false)
+      setApiKeyPreview(null)
+      toast.success('تم حذف المفتاح')
+    } catch (error) {
+      toast.error('فشل في حذف المفتاح')
+    }
+  }
 
   // تطبيق الإعدادات
   const applySettings = useCallback(() => {
@@ -143,7 +230,7 @@ export function AdvancedSettings() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="appearance">
             <Palette className="w-4 h-4 mr-1" />
             المظهر
@@ -159,6 +246,10 @@ export function AdvancedSettings() {
           <TabsTrigger value="shortcuts">
             <Keyboard className="w-4 h-4 mr-1" />
             الاختصارات
+          </TabsTrigger>
+          <TabsTrigger value="ai">
+            <Sparkles className="w-4 h-4 mr-1" />
+            الذكاء الاصطناعي
           </TabsTrigger>
         </TabsList>
 
@@ -419,6 +510,150 @@ export function AdvancedSettings() {
                     </kbd>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* تبويب الذكاء الاصطناعي */}
+        <TabsContent value="ai" className="space-y-4 mt-4">
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-500" />
+                مفتاح Gemini API
+              </CardTitle>
+              <CardDescription>
+                أضف مفتاحك الخاص لاستخدام ميزات الذكاء الاصطناعي
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoadingApiKey ? (
+                <div className="flex items-center justify-center py-4">
+                  <RefreshCw className="w-5 h-5 animate-spin text-gray-400" />
+                </div>
+              ) : hasApiKey ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                    <Check className="w-5 h-5 text-emerald-500" />
+                    <div>
+                      <p className="font-medium text-emerald-700 dark:text-emerald-400">مفتاح API مفعّل</p>
+                      <p className="text-sm text-emerald-600 dark:text-emerald-500">{apiKeyPreview}</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={deleteApiKey}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    حذف المفتاح
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                    <p className="text-sm text-amber-700 dark:text-amber-400">
+                      ⚠️ لإستخدام ميزة التوليد الذكي، تحتاج إلى إضافة مفتاح Gemini API الخاص بك
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Input
+                      type="password"
+                      placeholder="AIza..."
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      className="font-mono"
+                    />
+                    <p className="text-xs text-gray-500">
+                      المفتاح يبدأ بـ "AIza" - من Google AI Studio
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={saveApiKey}
+                      disabled={!apiKey.trim() || isSavingApiKey}
+                      className="flex-1"
+                    >
+                      {isSavingApiKey ? (
+                        <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Key className="w-4 h-4 mr-2" />
+                      )}
+                      حفظ المفتاح
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => window.open('https://aistudio.google.com/app/apikey', '_blank')}
+                    >
+                      <ExternalLink className="w-4 h-4 ml-1" />
+                      الحصول على مفتاح
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Brain className="w-4 h-4 text-blue-500" />
+                ميزات الذكاء الاصطناعي
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div>
+                    <p className="font-medium text-sm">التوليد الذكي للكلمات</p>
+                    <p className="text-xs text-gray-500">ملء تلقائي للترجمة والتعريف والأمثلة</p>
+                  </div>
+                  <Badge className="bg-purple-100 text-purple-700">
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    AI
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div>
+                    <p className="font-medium text-sm">تصحيح التهجئة</p>
+                    <p className="text-xs text-gray-500">تصحيح تلقائي للأخطاء الإملائية</p>
+                  </div>
+                  <Badge className="bg-blue-100 text-blue-700">
+                    <Check className="w-3 h-3 mr-1" />
+                    تلقائي
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div>
+                    <p className="font-medium text-sm">توليد القصص</p>
+                    <p className="text-xs text-gray-500">إنشاء قصص تعليمية مخصصة</p>
+                  </div>
+                  <Badge className="bg-amber-100 text-amber-700">
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    AI
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-md bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                  <Key className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h4 className="font-medium mb-1">كيفية الحصول على مفتاح Gemini API؟</h4>
+                  <ol className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
+                    <li>اضغط على "الحصول على مفتاح" أعلاه</li>
+                    <li>سجل الدخول بحساب Google</li>
+                    <li>اضغط "Create API Key"</li>
+                    <li>انسخ المفتاح وألصقه هنا</li>
+                  </ol>
+                </div>
               </div>
             </CardContent>
           </Card>
