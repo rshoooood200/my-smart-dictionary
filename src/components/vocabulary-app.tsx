@@ -38,6 +38,7 @@ import { PWAFeatures } from './pwa-features'
 import { AIAssistant } from './ai-assistant'
 import { ImportExport } from './import-export'
 import { AdvancedSettings } from './advanced-settings'
+import { SettingsPage } from './settings-page'
 import { FocusMode } from './focus-mode'
 import { DailyWidget } from './daily-widget'
 import { CustomLists } from './custom-lists'
@@ -1253,27 +1254,8 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
               </motion.div>
             )}
             {activeNav === 'settings' && (
-              <motion.div key="settings" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5 text-emerald-600" />الإعدادات العامة</CardTitle>
-                  </CardHeader>
-                  <CardContent><AdvancedSettings /></CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Layers className="w-5 h-5 text-emerald-600" />إعدادات PWA</CardTitle>
-                  </CardHeader>
-                  <CardContent><PWAFeatures /></CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><PieChart className="w-5 h-5 text-emerald-600" />الإحصائيات</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <AdvancedStatsSection words={words} xp={stats?.xp || 0} level={stats?.level || 1} streak={stats?.streak || 0} longestStreak={stats?.longestStreak || 0} achievements={currentUser?.achievements || []} />
-                  </CardContent>
-                </Card>
+              <motion.div key="settings" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <SettingsPage words={words} stats={stats} currentUser={currentUser} />
               </motion.div>
             )}
             {activeNav === 'admin' && currentUser?.email === FOUNDER_EMAIL && (
