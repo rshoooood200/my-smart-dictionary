@@ -1,24 +1,4 @@
-// AI Helper Functions - OpenRouter with Qwen 2.5 72B
-// Fast, cheap, and excellent quality!
-
-// ============== CONFIGURATION ==============
-
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const API_TIMEOUT = 60000; // 60 seconds
-
-// Qwen 2.5 72B - Best model for vocabulary learning
-const AI_MODEL = 'qwen/qwen-2.5-72b-instruct';
-
-// ============== API KEY ==============
-
-function getApiKey(): string {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) {
-    console.error('[AI] OPENROUTER_API_KEY not set in environment');
-    throw new Error('OPENROUTER_API_KEY not configured');
-  }
-  return key;
-}
+// AI Helper Functions - Supports OpenRouter and Gemini
 
 // ============== TYPES ==============
 
@@ -37,19 +17,40 @@ interface OpenRouterResponse {
   };
 }
 
-// ============== MAIN API ==============
+interface GeminiResponse {
+  candidates?: {
+    content: {
+      parts: { text: string }[];
+    };
+  }[];
+  error?: {
+    message: string;
+  };
+}
 
-async function callAI(
-  prompt: string,
-  systemPrompt?: string
-): Promise<string> {
-  const apiKey = getApiKey();
-  
+// ============== CONFIGURATION ==============
+
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const API_TIMEOUT = 60000; // 60 seconds
+
+// ============== OPENROUTER (Server-side) ==============
+
+function getOpenRouterKey(): string | null {
+  return process.env.OPENROUTER_API_KEY || null;
+}
+
+async function callOpenRouter(prompt: string, systemPrompt?: string): Promise<string> {
+  const apiKey = getOpenRouterKey();
+  if (!apiKey) {
+    throw new Error('OPENROUTER_API_KEY not configured');
+  }
+
   const fullPrompt = systemPrompt 
     ? `${systemPrompt}\n\n---\n\n${prompt}`
     : prompt;
 
-  console.log('[AI] Calling Qwen 2.5 72B...');
+  console.log('[AI] Calling OpenRouter (Qwen 2.5 72B)...');
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
@@ -64,7 +65,7 @@ async function callAI(
         'X-Title': 'Vocabulary Learning App',
       },
       body: JSON.stringify({
-        model: AI_MODEL,
+        model: 'qwen/qwen-2.5-72b-instruct',
         messages: [{ role: 'user', content: fullPrompt }],
         temperature: 0.3,
         max_tokens: 4096,
@@ -76,54 +77,117 @@ async function callAI(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[AI] API error:', response.status, errorText);
-      throw new Error(`AI API error: ${response.status}`);
+      console.error('[AI] OpenRouter error:', response.status, errorText);
+      throw new Error(`OpenRouter error: ${response.status}`);
     }
 
     const data: OpenRouterResponse = await response.json();
 
     if (data.error) {
-      console.error('[AI] API returned error:', data.error.message);
       throw new Error(data.error.message);
     }
 
     const content = data.choices?.[0]?.message?.content;
-
     if (!content) {
-      console.error('[AI] Empty response');
-      throw new Error('Empty AI response');
+      throw new Error('Empty OpenRouter response');
     }
 
-    console.log('[AI] Success! Tokens used:', data.usage?.total_tokens || 'unknown');
+    console.log('[AI] OpenRouter success! Tokens:', data.usage?.total_tokens || 'unknown');
     return content;
 
   } catch (error) {
     clearTimeout(timeoutId);
-    
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('AI request timeout');
-    }
-    
     throw error;
   }
 }
 
-// ============== EXPORTED FUNCTIONS ==============
+// ============== GEMINI (User's API Key) ==============
 
-export async function callGemini(
-  prompt: string,
-  systemPrompt?: string
-): Promise<string> {
-  return callAI(prompt, systemPrompt);
+async function callGeminiAPI(apiKey: string, prompt: string, systemPrompt?: string): Promise<string> {
+  const fullPrompt = systemPrompt 
+    ? `System: ${systemPrompt}\n\nUser: ${prompt}`
+    : prompt;
+
+  console.log('[AI] Calling Gemini API...');
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: fullPrompt }] }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 4096,
+        },
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[AI] Gemini error:', response.status, errorText);
+      throw new Error(`Gemini error: ${response.status}`);
+    }
+
+    const data: GeminiResponse = await response.json();
+
+    if (data.error) {
+      throw new Error(data.error.message);
+    }
+
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!content) {
+      throw new Error('Empty Gemini response');
+    }
+
+    console.log('[AI] Gemini success!');
+    return content;
+
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
 }
 
+// ============== MAIN FUNCTIONS ==============
+
+/**
+ * Call AI with optional user's Gemini API key
+ * Falls back to server's OpenRouter key if no user key provided
+ */
+export async function callGemini(
+  prompt: string,
+  systemPrompt?: string,
+  userApiKey?: string
+): Promise<string> {
+  // If user has a Gemini key, use it
+  if (userApiKey) {
+    return callGeminiAPI(userApiKey, prompt, systemPrompt);
+  }
+
+  // Fall back to OpenRouter (server key)
+  return callOpenRouter(prompt, systemPrompt);
+}
+
+/**
+ * Call AI and parse JSON response
+ */
 export async function callGeminiJSON<T>(
   prompt: string,
-  systemPrompt?: string
+  systemPrompt?: string,
+  userApiKey?: string
 ): Promise<T> {
   const enhancedPrompt = `${prompt}\n\nReturn ONLY valid JSON. No markdown. Start with { end with }`;
 
-  const response = await callAI(enhancedPrompt, systemPrompt);
+  const response = await callGemini(enhancedPrompt, systemPrompt, userApiKey);
 
   console.log('[AI] Raw response length:', response.length);
 
@@ -169,13 +233,13 @@ export async function validateAndResetKeys() {
 }
 
 export function getKeysStatus() {
-  const key = process.env.OPENROUTER_API_KEY;
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
   
   return [
     {
-      name: 'Qwen 2.5 72B (OpenRouter)',
-      preview: key ? `${key.slice(0, 7)}...${key.slice(-4)}` : 'Not set',
-      available: !!key,
+      name: 'OpenRouter (Qwen 2.5 72B)',
+      preview: openRouterKey ? `${openRouterKey.slice(0, 7)}...${openRouterKey.slice(-4)}` : 'Not set',
+      available: !!openRouterKey,
     },
   ];
 }

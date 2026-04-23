@@ -1156,3 +1156,14 @@ model KidsProgress {
   @@index([userId])
   @@index([level])
 }
+
+// Gemini API Configuration for users
+model GeminiConfig {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  apiKey    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}

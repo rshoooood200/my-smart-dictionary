@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { useVocabStore } from '@/store/vocab-store'
 
 interface Category {
   id: string
@@ -43,6 +44,9 @@ interface WordData {
 }
 
 export function AddWordDialog({ open, onOpenChange, categories, onSuccess }: AddWordDialogProps) {
+  // Get current user ID for AI features
+  const currentUserId = useVocabStore(state => state.currentUserId)
+  
   // Local form state
   const [word, setWord] = useState('')
   const [translation, setTranslation] = useState('')
@@ -96,7 +100,7 @@ export function AddWordDialog({ open, onOpenChange, categories, onSuccess }: Add
       const res = await fetch('/api/word-info', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: wordText }),
+        body: JSON.stringify({ word: wordText, userId: currentUserId }),
       })
       const data = await res.json()
       

@@ -1,16 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callGeminiJSON } from '@/lib/ai';
+import { db } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { word } = body;
+    const { word, userId } = body;
 
     if (!word || typeof word !== 'string') {
       return NextResponse.json({ success: false, error: 'Word is required' }, { status: 400 });
     }
 
     const wordText = word.toLowerCase().trim();
+
+    // Check if user has a Gemini API key stored
+    let userApiKey: string | undefined;
+    if (userId) {
+      try {
+        const config = await db.geminiConfig.findUnique({
+          where: { userId }
+        });
+        if (config?.apiKey) {
+          userApiKey = config.apiKey;
+          console.log('[Word-Info] Using user\'s Gemini API key');
+        }
+      } catch (dbError) {
+        console.log('[Word-Info] Could not fetch user API key, using server key');
+      }
+    }
 
     // Quick and focused prompt for speed + spelling check
     const prompt = `Analyze: "${wordText}"
@@ -57,7 +74,7 @@ JSON:`;
       examples: { en: string; ar: string }[];
       usageNotes: string;
       wordFamily: Record<string, string>;
-    }>(prompt);
+    }>(prompt, undefined, userApiKey);
 
     const validPartsOfSpeech = ['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'pronoun', 'interjection', 'phrasal_verb', 'idiom'];
     
@@ -87,10 +104,23 @@ JSON:`;
     };
 
     return NextResponse.json({ success: true, data: validatedData });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting word info:', error);
+    
+    // Check if it's an API key error
+    if (error.message?.includes('API_KEY') || error.message?.includes('not configured')) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'ميزة الذكاء الاصطناعي غير مفعّلة. يرجى إضافة مفتاح API في الإعدادات أو تواصل مع الدعم.',
+          needsApiKey: true
+        },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
-      { success: false, error: 'Failed to get word information' },
+      { success: false, error: 'فشل في الحصول على معلومات الكلمة' },
       { status: 500 }
     );
   }
