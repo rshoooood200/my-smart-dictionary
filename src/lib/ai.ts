@@ -50,7 +50,7 @@ async function callOpenRouter(prompt: string, systemPrompt?: string): Promise<st
     ? `${systemPrompt}\n\n---\n\n${prompt}`
     : prompt;
 
-  console.log('[AI] Calling OpenRouter (Qwen 2.5 72B)...');
+  console.log('[AI] Calling OpenRouter (Qwen 3 235B)...');
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
@@ -65,7 +65,7 @@ async function callOpenRouter(prompt: string, systemPrompt?: string): Promise<st
         'X-Title': 'Vocabulary Learning App',
       },
       body: JSON.stringify({
-        model: 'qwen/qwen-2.5-72b-instruct',
+        model: 'qwen/qwen3-235b-a22b-07-25',
         messages: [{ role: 'user', content: fullPrompt }],
         temperature: 0.3,
         max_tokens: 4096,
@@ -237,7 +237,7 @@ export function getKeysStatus() {
   
   return [
     {
-      name: 'OpenRouter (Qwen 2.5 72B)',
+      name: 'OpenRouter (Qwen 3 235B)',
       preview: openRouterKey ? `${openRouterKey.slice(0, 7)}...${openRouterKey.slice(-4)}` : 'Not set',
       available: !!openRouterKey,
     },
