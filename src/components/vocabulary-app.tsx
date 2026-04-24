@@ -39,18 +39,14 @@ import { AIAssistant } from './ai-assistant'
 import { ImportExport } from './import-export'
 import { AdvancedSettings } from './advanced-settings'
 import { SettingsPage } from './settings-page'
-import { FocusMode } from './focus-mode'
 import { DailyWidget } from './daily-widget'
 import { CustomLists } from './custom-lists'
 import { LearningPaths } from './learning-paths'
-import { SmartNotifications } from './smart-notifications'
 import { AdvancedAnalytics } from './advanced-analytics'
 import { KidsLearning } from './kids-learning'
 import { AdultsLearning } from './adults-learning'
 import { LearningSectionSelector } from './learning-section-selector'
-import { CommunityHub } from './community-hub'
 import { RewardsStore } from './rewards-store'
-import { LevelTest } from './level-test'
 import { AdminDashboard } from './admin-dashboard'
 import { AdminAnnouncements } from './admin-announcements'
 
@@ -1208,10 +1204,6 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
                 <VoiceFeatures words={words} onProgress={(result) => { if (result.passed) toast.success(`أحسنت! دقة ${result.accuracy}%`) }} />
               </motion.div>
             )}
-            {activeNav === 'focus' && (
-              <motion.div key="focus" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <FocusMode />
-              </motion.div>
             )}
             {activeNav === 'ai' && (
               <motion.div key="ai" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
@@ -1223,30 +1215,21 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
                 <AdvancedAnalytics currentUserId={currentUserId || ''} words={words} categories={categories} />
               </motion.div>
             )}
-            {activeNav === 'notifications' && (
-              <motion.div key="notifications" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <SmartNotifications currentUserId={currentUserId || ''} stats={{ wordsToReview: words.filter(w => w.nextReviewAt && new Date(w.nextReviewAt) <= new Date()).length, dailyGoalProgress: stats?.dailyGoalProgress || 0, currentStreak: stats?.currentStreak || 1 }} />
-              </motion.div>
+            
             )}
             {activeNav === 'data' && (
               <motion.div key="data" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <ImportExport />
               </motion.div>
             )}
-            {activeNav === 'community' && (
-              <motion.div key="community" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <CommunityHub />
-              </motion.div>
+           
             )}
             {activeNav === 'rewards' && (
               <motion.div key="rewards" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <RewardsStore />
               </motion.div>
             )}
-            {activeNav === 'level-test' && (
-              <motion.div key="level-test" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <LevelTest />
-              </motion.div>
+           
             )}
             {activeNav === 'achievements' && (
               <motion.div key="achievements" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
