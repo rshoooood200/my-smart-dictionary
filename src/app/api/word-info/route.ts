@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Quick and focused prompt for speed + spelling check
+    // Enhanced prompt with word forms
     const prompt = `Analyze: "${wordText}"
 
 FIRST: Check if "${wordText}" is spelled correctly.
@@ -50,12 +50,34 @@ Return JSON:
   "antonyms": ["ant1", "ant2", "ant3"],
   "examples": [
     {"en": "Sentence with word", "ar": "الترجمة"},
-    {"en": "Sentence 2", "ar": "الترجمة"},
-    {"en": "Sentence 3", "ar": "الترجمة"}
+    {"en": "Sentence 2", "ar": "الترجمة"}
   ],
   "usageNotes": "Brief usage note",
-  "wordFamily": {"noun": "form", "verb": "form", "adjective": "form", "adverb": "form"}
+  "verbForms": {
+    "past": "past tense form",
+    "pastParticiple": "past participle form",
+    "present": "present/base form",
+    "gerund": "ing form",
+    "thirdPerson": "third person singular form"
+  },
+  "nounForms": {
+    "singular": "singular form",
+    "plural": "plural form",
+    "countable": true/false
+  },
+  "adjectiveForms": {
+    "comparative": "comparative form",
+    "superlative": "superlative form",
+    "adverb": "adverb form"
+  },
+  "arabicMeaning": "شرح مفصل بالعربي"
 }
+
+IMPORTANT: 
+- Only include verbForms if partOfSpeech is "verb"
+- Only include nounForms if partOfSpeech is "noun"
+- Only include adjectiveForms if partOfSpeech is "adjective"
+- All forms should be empty strings "" if not applicable
 
 Word: "${wordText}"
 JSON:`;
@@ -73,7 +95,24 @@ JSON:`;
       antonyms: string[];
       examples: { en: string; ar: string }[];
       usageNotes: string;
-      wordFamily: Record<string, string>;
+      verbForms?: {
+        past?: string;
+        pastParticiple?: string;
+        present?: string;
+        gerund?: string;
+        thirdPerson?: string;
+      };
+      nounForms?: {
+        singular?: string;
+        plural?: string;
+        countable?: boolean;
+      };
+      adjectiveForms?: {
+        comparative?: string;
+        superlative?: string;
+        adverb?: string;
+      };
+      arabicMeaning?: string;
     }>(prompt, undefined, userApiKey);
 
     const validPartsOfSpeech = ['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'pronoun', 'interjection', 'phrasal_verb', 'idiom'];
@@ -93,6 +132,9 @@ JSON:`;
       level: ['beginner', 'intermediate', 'advanced'].includes(wordData.level) ? wordData.level : 'beginner',
       synonyms: Array.isArray(wordData.synonyms) ? wordData.synonyms.slice(0, 8) : [],
       antonyms: Array.isArray(wordData.antonyms) ? wordData.antonyms.slice(0, 5) : [],
+      examples: Array.isArray(wordData.examples)
+        ? wordData.examples.slice(0, 5).map(s => s.en || '')
+        : [],
       sentences: Array.isArray(wordData.examples)
         ? wordData.examples.slice(0, 5).map(s => ({
             sentence: s.en || '',
@@ -100,19 +142,24 @@ JSON:`;
           }))
         : [],
       usageNotes: wordData.usageNotes || '',
-      wordFamily: wordData.wordFamily || {},
+      arabicMeaning: wordData.arabicMeaning || '',
+      // تراكيب الفعل
+      verbForms: wordData.verbForms || {},
+      // تراكيب الاسم
+      nounForms: wordData.nounForms || {},
+      // تراكيب الصفة
+      adjectiveForms: wordData.adjectiveForms || {},
     };
 
     return NextResponse.json({ success: true, data: validatedData });
   } catch (error: any) {
     console.error('Error getting word info:', error);
     
-    // Check if it's an API key error
     if (error.message?.includes('API_KEY') || error.message?.includes('not configured')) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'ميزة الذكاء الاصطناعي غير مفعّلة. يرجى إضافة مفتاح API في الإعدادات أو تواصل مع الدعم.',
+          error: 'ميزة الذكاء الاصطناعي غير مفعّلة. يرجى إضافة مفتاح API في الإعدادات.',
           needsApiKey: true
         },
         { status: 400 }
