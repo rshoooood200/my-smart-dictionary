@@ -89,70 +89,88 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
     setShowAdvanced(false)
   }
 
-  const handleGenerateInfo = async () => {
-    if (!word.trim()) {
-      toast.error('الرجاء إدخال الكلمة أولاً')
-      return
+const handleGenerateInfo = async () => {
+  if (!word.trim()) {
+    toast.error('الرجاء إدخال الكلمة أولاً')
+    return
+  }
+  
+  setIsGenerating(true)
+  try {
+    const response = await fetch('/api/word-info', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word: word.trim() })
+    })
+    
+    if (!response.ok) throw new Error('Failed to generate')
+    
+    const result = await response.json()
+    
+    // التحقق من نجاح العملية
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'فشل في الحصول على البيانات')
     }
     
-    setIsGenerating(true)
-    try {
-      const response = await fetch('/api/word-info', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: word.trim() })
-      })
-      
-      if (!response.ok) throw new Error('Failed to generate')
-      
-      const data = await response.json()
-      
-      if (data.translation) setTranslation(data.translation)
-      if (data.pronunciation) setPronunciation(data.pronunciation)
-      if (data.partOfSpeech) setPartOfSpeech(data.partOfSpeech)
-      if (data.level) setLevel(data.level)
-      
-      // تراكيب الفعل
-      if (data.verbForms) {
-        if (data.verbForms.past) setPastTense(data.verbForms.past)
-        if (data.verbForms.pastParticiple) setPastParticiple(data.verbForms.pastParticiple)
-        if (data.verbForms.present) setPresentTense(data.verbForms.present)
-        if (data.verbForms.gerund) setGerund(data.verbForms.gerund)
-        if (data.verbForms.thirdPerson) setThirdPerson(data.verbForms.thirdPerson)
-      }
-      
-      // تراكيب الاسم
-      if (data.nounForms) {
-        if (data.nounForms.singular) setSingular(data.nounForms.singular)
-        if (data.nounForms.plural) setPlural(data.nounForms.plural)
-      }
-      
-      // تراكيب الصفة
-      if (data.adjectiveForms) {
-        if (data.adjectiveForms.comparative) setComparative(data.adjectiveForms.comparative)
-        if (data.adjectiveForms.superlative) setSuperlative(data.adjectiveForms.superlative)
-        if (data.adjectiveForms.adverb) setAdverb(data.adjectiveForms.adverb)
-      }
-      
-      // أمثلة
-      if (data.examples && data.examples.length > 0) {
-        setExample1(data.examples[0] || '')
-        setExample2(data.examples[1] || '')
-      }
-      
-      // مرادفات وأضداد
-      if (data.synonyms) setSynonyms(data.synonyms.join(', '))
-      if (data.antonyms) setAntonyms(data.antonyms.join(', '))
-      if (data.arabicMeaning) setArabicMeaning(data.arabicMeaning)
-      
-      toast.success('تم توليد المعلومات بنجاح!')
-    } catch (error) {
-      console.error(error)
-      toast.error('فشل في توليد المعلومات')
-    } finally {
-      setIsGenerating(false)
+    const data = result.data
+    
+    // التحقق من التهجئة
+    if (!data.isCorrect && data.correctWord) {
+      toast.info(`تم تصحيح الكلمة إلى: ${data.correctWord}`)
+      setWord(data.correctWord)
     }
+    
+    if (data.translation) setTranslation(data.translation)
+    if (data.pronunciation) setPronunciation(data.pronunciation)
+    if (data.partOfSpeech) setPartOfSpeech(data.partOfSpeech)
+    if (data.level) setLevel(data.level)
+    if (data.definition) setArabicMeaning(data.definition)
+    
+    // تراكيب الفعل
+    if (data.verbForms) {
+      if (data.verbForms.past) setPastTense(data.verbForms.past)
+      if (data.verbForms.pastParticiple) setPastParticiple(data.verbForms.pastParticiple)
+      if (data.verbForms.present) setPresentTense(data.verbForms.present)
+      if (data.verbForms.gerund) setGerund(data.verbForms.gerund)
+      if (data.verbForms.thirdPerson) setThirdPerson(data.verbForms.thirdPerson)
+    }
+    
+    // تراكيب الاسم
+    if (data.nounForms) {
+      if (data.nounForms.singular) setSingular(data.nounForms.singular)
+      if (data.nounForms.plural) setPlural(data.nounForms.plural)
+    }
+    
+    // تراكيب الصفة
+    if (data.adjectiveForms) {
+      if (data.adjectiveForms.comparative) setComparative(data.adjectiveForms.comparative)
+      if (data.adjectiveForms.superlative) setSuperlative(data.adjectiveForms.superlative)
+      if (data.adjectiveForms.adverb) setAdverb(data.adjectiveForms.adverb)
+    }
+    
+    // أمثلة
+    if (data.examples && data.examples.length > 0) {
+      setExample1(data.examples[0] || '')
+      setExample2(data.examples[1] || '')
+    }
+    
+    // مرادفات وأضداد
+    if (data.synonyms && data.synonyms.length > 0) {
+      setSynonyms(data.synonyms.join(', '))
+    }
+    if (data.antonyms && data.antonyms.length > 0) {
+      setAntonyms(data.antonyms.join(', '))
+    }
+    if (data.arabicMeaning) setArabicMeaning(data.arabicMeaning)
+    
+    toast.success('تم توليد المعلومات بنجاح!')
+  } catch (error) {
+    console.error(error)
+    toast.error('فشل في توليد المعلومات')
+  } finally {
+    setIsGenerating(false)
   }
+}
 
   const handleSubmit = () => {
     if (!word.trim() || !translation.trim()) {
