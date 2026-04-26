@@ -1,644 +1,572 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Sparkles, Loader2, FolderPlus, AlertCircle, CheckCircle2, X, BookOpen, Volume2, Lightbulb, ArrowRightLeft } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
+import { Separator } from '@/components/ui/separator'
+import { 
+  Plus, BookOpen, Lightbulb, Sparkles, Loader2, ChevronDown, ChevronUp,
+  FileText, Wand2, Info
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useVocabStore } from '@/store/vocab-store'
 import { cn } from '@/lib/utils'
-import type { Sentence } from '@/store/vocab-store'
-import { AddCategoryDialog } from './add-category-dialog-local'
 
 interface AddWordDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-const predefinedColors = [
-  '#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EC4899', 
-  '#EF4444', '#06B6D4', '#84CC16', '#F97316', '#6366F1'
-]
-
 export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
-  const { categories, addWord, addCategory, words } = useVocabStore()
+  const { categories, addWord } = useVocabStore()
   
   const [word, setWord] = useState('')
   const [translation, setTranslation] = useState('')
   const [pronunciation, setPronunciation] = useState('')
-  const [definition, setDefinition] = useState('')
   const [partOfSpeech, setPartOfSpeech] = useState('')
-  const [level, setLevel] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner')
+  const [level, setLevel] = useState('beginner')
   const [categoryId, setCategoryId] = useState('')
-  const [sentences, setSentences] = useState<Sentence[]>([])
-  const [synonyms, setSynonyms] = useState<string[]>([])
-  const [antonyms, setAntonyms] = useState<string[]>([])
-  const [usageNotes, setUsageNotes] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  
+  // تراكيب الفعل
+  const [pastTense, setPastTense] = useState('')
+  const [pastParticiple, setPastParticiple] = useState('')
+  const [presentTense, setPresentTense] = useState('')
+  const [gerund, setGerund] = useState('')
+  const [thirdPerson, setThirdPerson] = useState('')
+  
+  // تراكيب الاسم
+  const [singular, setSingular] = useState('')
+  const [plural, setPlural] = useState('')
+  const [countable, setCountable] = useState(true)
+  
+  // تراكيب الصفة
+  const [comparative, setComparative] = useState('')
+  const [superlative, setSuperlative] = useState('')
+  const [adverb, setAdverb] = useState('')
+  
+  // معلومات إضافية
+  const [example1, setExample1] = useState('')
+  const [example2, setExample2] = useState('')
+  const [synonyms, setSynonyms] = useState('')
+  const [antonyms, setAntonyms] = useState('')
+  const [arabicMeaning, setArabicMeaning] = useState('')
+  const [context, setContext] = useState('')
+  
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false)
-  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null)
-  const [correctedWord, setCorrectedWord] = useState<string | null>(null)
-  const [suggestions, setSuggestions] = useState<string[]>([])
-
-  // Check for duplicates when word changes
-  useEffect(() => {
-    if (word.trim()) {
-      const normalizedWord = word.toLowerCase().trim()
-      const existingWord = words.find(w => w.word.toLowerCase() === normalizedWord)
-      if (existingWord) {
-        setDuplicateWarning(`الكلمة "${existingWord.word}" موجودة بالفعل!`)
-      } else {
-        setDuplicateWarning(null)
-      }
-    } else {
-      setDuplicateWarning(null)
-    }
-  }, [word, words])
 
   const resetForm = () => {
     setWord('')
     setTranslation('')
     setPronunciation('')
-    setDefinition('')
     setPartOfSpeech('')
     setLevel('beginner')
     setCategoryId('')
-    setSentences([])
-    setSynonyms([])
-    setAntonyms([])
-    setUsageNotes('')
-    setIsLoading(false)
-    setIsGenerating(false)
-    setDuplicateWarning(null)
-    setCorrectedWord(null)
-    setSuggestions([])
+    setPastTense('')
+    setPastParticiple('')
+    setPresentTense('')
+    setGerund('')
+    setThirdPerson('')
+    setSingular('')
+    setPlural('')
+    setCountable(true)
+    setComparative('')
+    setSuperlative('')
+    setAdverb('')
+    setExample1('')
+    setExample2('')
+    setSynonyms('')
+    setAntonyms('')
+    setArabicMeaning('')
+    setContext('')
+    setShowAdvanced(false)
   }
 
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      resetForm()
-    }
-    onOpenChange(newOpen)
-  }
-
-  const generateWordInfo = async () => {
+  const handleGenerateInfo = async () => {
     if (!word.trim()) {
       toast.error('الرجاء إدخال الكلمة أولاً')
       return
     }
-
-    // Check for duplicates before generating
-    const normalizedWord = word.toLowerCase().trim()
-    const existingWord = words.find(w => w.word.toLowerCase() === normalizedWord)
-    if (existingWord) {
-      toast.error(`الكلمة "${existingWord.word}" موجودة بالفعل!`, {
-        description: 'لا يمكنك إضافة نفس الكلمة مرتين'
-      })
-      return
-    }
-
-    setIsGenerating(true)
-    setCorrectedWord(null)
-    setSuggestions([])
     
+    setIsGenerating(true)
     try {
-      const res = await fetch('/api/word-info', {
+      const response = await fetch('/api/word-info', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: word.trim() }),
+        body: JSON.stringify({ word: word.trim() })
       })
       
-      const data = await res.json()
+      if (!response.ok) throw new Error('Failed to generate')
       
-      if (data.success && data.data) {
-        const wordData = data.data
-        
-        // Handle spelling correction
-        if (!wordData.isCorrect && wordData.correctWord) {
-          setCorrectedWord(wordData.correctWord)
-          setSuggestions(wordData.suggestions || [])
-          toast.info(`تم تصحيح الكلمة من "${word}" إلى "${wordData.correctWord}"`, {
-            description: 'انقر على الكلمة الصحيحة لاستخدامها'
-          })
-        }
-        
-        setTranslation(wordData.translation || translation)
-        setPronunciation(wordData.pronunciation || pronunciation)
-        setDefinition(wordData.definition || definition)
-        setPartOfSpeech(wordData.partOfSpeech || partOfSpeech)
-        setLevel(wordData.level || level)
-        setSynonyms(wordData.synonyms || [])
-        setAntonyms(wordData.antonyms || [])
-        setUsageNotes(wordData.usageNotes || '')
-        
-        if (wordData.sentences && wordData.sentences.length > 0) {
-          setSentences(wordData.sentences.map((s: { sentence: string; translation: string }) => ({
-            id: `sentence_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            sentence: s.sentence,
-            translation: s.translation,
-            isAiGenerated: true
-          })))
-        }
-        
-        toast.success('تم توليد المعلومات بنجاح', {
-          description: 'يمكنك تعديل المعلومات قبل الحفظ'
-        })
-      } else {
-        toast.error(data.error || 'فشل في توليد المعلومات')
+      const data = await response.json()
+      
+      if (data.translation) setTranslation(data.translation)
+      if (data.pronunciation) setPronunciation(data.pronunciation)
+      if (data.partOfSpeech) setPartOfSpeech(data.partOfSpeech)
+      if (data.level) setLevel(data.level)
+      
+      // تراكيب الفعل
+      if (data.verbForms) {
+        if (data.verbForms.past) setPastTense(data.verbForms.past)
+        if (data.verbForms.pastParticiple) setPastParticiple(data.verbForms.pastParticiple)
+        if (data.verbForms.present) setPresentTense(data.verbForms.present)
+        if (data.verbForms.gerund) setGerund(data.verbForms.gerund)
+        if (data.verbForms.thirdPerson) setThirdPerson(data.verbForms.thirdPerson)
       }
+      
+      // تراكيب الاسم
+      if (data.nounForms) {
+        if (data.nounForms.singular) setSingular(data.nounForms.singular)
+        if (data.nounForms.plural) setPlural(data.nounForms.plural)
+      }
+      
+      // تراكيب الصفة
+      if (data.adjectiveForms) {
+        if (data.adjectiveForms.comparative) setComparative(data.adjectiveForms.comparative)
+        if (data.adjectiveForms.superlative) setSuperlative(data.adjectiveForms.superlative)
+        if (data.adjectiveForms.adverb) setAdverb(data.adjectiveForms.adverb)
+      }
+      
+      // أمثلة
+      if (data.examples && data.examples.length > 0) {
+        setExample1(data.examples[0] || '')
+        setExample2(data.examples[1] || '')
+      }
+      
+      // مرادفات وأضداد
+      if (data.synonyms) setSynonyms(data.synonyms.join(', '))
+      if (data.antonyms) setAntonyms(data.antonyms.join(', '))
+      if (data.arabicMeaning) setArabicMeaning(data.arabicMeaning)
+      
+      toast.success('تم توليد المعلومات بنجاح!')
     } catch (error) {
-      console.error('Error generating word info:', error)
-      const errorMessage = error instanceof Error ? error.message : 'فشل في الاتصال بالخادم'
-      toast.error('فشل في توليد المعلومات', {
-        description: errorMessage.includes('Load failed') 
-          ? 'تأكد من اتصالك بالإنترنت وحاول مرة أخرى'
-          : errorMessage
-      })
+      console.error(error)
+      toast.error('فشل في توليد المعلومات')
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const useCorrectedWord = () => {
-    if (correctedWord) {
-      setWord(correctedWord)
-      setCorrectedWord(null)
-      setSuggestions([])
-    }
-  }
-
-  const applySuggestion = (suggestion: string) => {
-    setWord(suggestion)
-    setCorrectedWord(null)
-    setSuggestions([])
-  }
-
-  const addSentence = () => {
-    setSentences([
-      ...sentences,
-      {
-        id: `sentence_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        sentence: '',
-        translation: '',
-        isAiGenerated: false
-      }
-    ])
-  }
-
-  const updateSentence = (index: number, field: 'sentence' | 'translation', value: string) => {
-    const updated = [...sentences]
-    updated[index] = { ...updated[index], [field]: value }
-    setSentences(updated)
-  }
-
-  const removeSentence = (index: number) => {
-    setSentences(sentences.filter((_, i) => i !== index))
-  }
-
-  const handleAddCategory = (name: string, nameAr: string, color: string) => {
-    addCategory({ name, nameAr: nameAr || undefined, color })
-    toast.success('تمت إضافة التصنيف بنجاح')
-  }
-
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!word.trim() || !translation.trim()) {
       toast.error('الرجاء إدخال الكلمة والترجمة')
       return
     }
 
-    // Final duplicate check
-    const normalizedWord = word.toLowerCase().trim()
-    const existingWord = words.find(w => w.word.toLowerCase() === normalizedWord)
-    if (existingWord) {
-      toast.error(`الكلمة "${existingWord.word}" موجودة بالفعل!`)
-      return
-    }
+    const examples: string[] = []
+    if (example1.trim()) examples.push(example1.trim())
+    if (example2.trim()) examples.push(example2.trim())
 
-    setIsLoading(true)
-    try {
-      await addWord({
-        word: word.trim(),
-        translation: translation.trim(),
-        pronunciation: pronunciation.trim() || undefined,
-        definition: definition.trim() || undefined,
-        partOfSpeech: partOfSpeech || undefined,
-        level,
-        categoryId: categoryId || undefined,
-        sentences: sentences.filter(s => s.sentence.trim() && s.translation.trim()),
-        synonyms: synonyms.length > 0 ? synonyms : undefined,
-        antonyms: antonyms.length > 0 ? antonyms : undefined,
-        usageNotes: usageNotes.trim() || undefined
-      })
+    addWord({
+      word: word.trim(),
+      translation: translation.trim(),
+      pronunciation: pronunciation.trim() || undefined,
+      partOfSpeech: partOfSpeech || undefined,
+      level,
+      categoryId: categoryId || undefined,
+      verbForms: partOfSpeech === 'verb' ? {
+        past: pastTense.trim() || undefined,
+        pastParticiple: pastParticiple.trim() || undefined,
+        present: presentTense.trim() || undefined,
+        gerund: gerund.trim() || undefined,
+        thirdPerson: thirdPerson.trim() || undefined,
+      } : undefined,
+      nounForms: partOfSpeech === 'noun' ? {
+        singular: singular.trim() || undefined,
+        plural: plural.trim() || undefined,
+        countable,
+      } : undefined,
+      adjectiveForms: partOfSpeech === 'adjective' ? {
+        comparative: comparative.trim() || undefined,
+        superlative: superlative.trim() || undefined,
+        adverb: adverb.trim() || undefined,
+      } : undefined,
+      examples: examples.length > 0 ? examples : undefined,
+      synonyms: synonyms.trim() ? synonyms.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      antonyms: antonyms.trim() ? antonyms.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      arabicMeaning: arabicMeaning.trim() || undefined,
+      context: context.trim() || undefined,
+    })
 
-      toast.success('تمت إضافة الكلمة بنجاح')
-      handleOpenChange(false)
-    } catch {
-      toast.error('فشل في إضافة الكلمة')
-    } finally {
-      setIsLoading(false)
-    }
+    toast.success('تمت إضافة الكلمة بنجاح!')
+    resetForm()
+    onOpenChange(false)
   }
-
-  const speakWord = () => {
-    if (!word.trim() || !('speechSynthesis' in window)) return
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(word.trim())
-    utterance.lang = 'en-US'
-    utterance.rate = 0.8
-    window.speechSynthesis.speak(utterance)
-  }
-
-  const partOfSpeechOptions = [
-    { value: 'noun', label: 'Noun', labelAr: 'اسم' },
-    { value: 'verb', label: 'Verb', labelAr: 'فعل' },
-    { value: 'adjective', label: 'Adjective', labelAr: 'صفة' },
-    { value: 'adverb', label: 'Adverb', labelAr: 'ظرف' },
-    { value: 'preposition', label: 'Preposition', labelAr: 'حرف جر' },
-    { value: 'conjunction', label: 'Conjunction', labelAr: 'حرف عطف' },
-    { value: 'pronoun', label: 'Pronoun', labelAr: 'ضمير' },
-    { value: 'interjection', label: 'Interjection', labelAr: 'حرف تعجب' },
-    { value: 'phrasal_verb', label: 'Phrasal Verb', labelAr: 'فعل عبارة' },
-    { value: 'idiom', label: 'Idiom', labelAr: 'تعبير' },
-  ]
-
-  const levelOptions = [
-    { value: 'beginner', label: 'Beginner', labelAr: 'مبتدئ', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
-    { value: 'intermediate', label: 'Intermediate', labelAr: 'متوسط', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-    { value: 'advanced', label: 'Advanced', labelAr: 'متقدم', color: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' },
-  ]
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5 text-emerald-600" />
-              إضافة كلمة جديدة
-            </DialogTitle>
-            <DialogDescription>
-              أضف كلمة جديدة لقاموسك الشخصي مع معلومات شاملة
-            </DialogDescription>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <Plus className="w-5 h-5 text-emerald-600" />
+            إضافة كلمة جديدة
+          </DialogTitle>
+          <DialogDescription>
+            أضف كلمة جديدة مع جميع تفاصيلها وتراكيبها
+          </DialogDescription>
+        </DialogHeader>
 
-          <div className="space-y-6 py-4">
-            {/* Word input with AI button */}
-            <div className="space-y-2">
-              <Label htmlFor="word">الكلمة الإنجليزية *</Label>
-              <div className="flex gap-2">
-                <div className="flex-1 relative">
+        <div className="space-y-6 py-4">
+          {/* الكلمة الأساسية */}
+          <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-900/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-emerald-600" />
+                الكلمة الأساسية
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="word">الكلمة بالإنجليزية *</Label>
                   <Input
                     id="word"
-                    placeholder="مثال: accomplish"
                     value={word}
                     onChange={(e) => setWord(e.target.value)}
-                    className={cn(
-                      "pr-10",
-                      duplicateWarning && "border-amber-500 focus-visible:ring-amber-500"
-                    )}
+                    placeholder="مثال: beautiful"
                   />
-                  {word.trim() && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-8"
-                      onClick={speakWord}
-                    >
-                      <Volume2 className="w-4 h-4 text-gray-400 hover:text-emerald-600" />
-                    </Button>
-                  )}
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={generateWordInfo}
-                  disabled={isGenerating || !word.trim()}
-                  className="shrink-0 bg-gradient-to-r from-violet-500 to-purple-600 text-white border-0 hover:from-violet-600 hover:to-purple-700"
-                >
-                  {isGenerating ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : (
-                    <Sparkles className="w-4 h-4 mr-2" />
-                  )}
-                  توليد AI
-                </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="translation">الترجمة بالعربي *</Label>
+                  <Input
+                    id="translation"
+                    value={translation}
+                    onChange={(e) => setTranslation(e.target.value)}
+                    placeholder="مثال: جميل"
+                  />
+                </div>
               </div>
               
-              {/* Duplicate Warning */}
-              <AnimatePresence>
-                {duplicateWarning && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="flex items-center gap-2 text-amber-600 text-sm bg-amber-50 dark:bg-amber-900/20 p-2 rounded-lg"
-                  >
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{duplicateWarning}</span>
-                  </motion.div>
+              <Button
+                variant="outline"
+                className="w-full border-emerald-300 hover:bg-emerald-100"
+                onClick={handleGenerateInfo}
+                disabled={isGenerating || !word.trim()}
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    جاري التوليد...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    توليد تلقائي بالذكاء الاصطناعي
+                  </>
                 )}
-              </AnimatePresence>
+              </Button>
+            </CardContent>
+          </Card>
 
-              {/* Spelling Correction */}
-              <AnimatePresence>
-                {correctedWord && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="space-y-2"
-                  >
-                    <div 
-                      className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
-                      onClick={useCorrectedWord}
-                    >
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span className="text-emerald-700 dark:text-emerald-400">
-                        هل كنت تقول: <strong className="text-emerald-800 dark:text-emerald-300">{correctedWord}</strong>؟
-                      </span>
-                      <Badge variant="outline" className="mr-auto text-emerald-600 border-emerald-300">
-                        انقر للاستخدام
-                      </Badge>
-                    </div>
-                    
-                    {suggestions.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        <span className="text-xs text-gray-500">اقتراحات أخرى:</span>
-                        {suggestions.map((s, i) => (
-                          <Badge
-                            key={i}
-                            variant="secondary"
-                            className="cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700"
-                            onClick={() => applySuggestion(s)}
-                          >
-                            {s}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Translation */}
-            <div className="space-y-2">
-              <Label htmlFor="translation">الترجمة العربية *</Label>
-              <Input
-                id="translation"
-                placeholder="مثال: يُنجز"
-                value={translation}
-                onChange={(e) => setTranslation(e.target.value)}
-              />
-            </div>
-
-            {/* Pronunciation */}
-            <div className="space-y-2">
-              <Label htmlFor="pronunciation">النطق (IPA)</Label>
-              <Input
-                id="pronunciation"
-                placeholder="مثال: /əˈkʌmplɪʃ/"
-                value={pronunciation}
-                onChange={(e) => setPronunciation(e.target.value)}
-                className="font-mono"
-              />
-            </div>
-
-            {/* Definition (English) */}
-            <div className="space-y-2">
-              <Label htmlFor="definition">
-                <div className="flex items-center gap-2">
-                  <span>التعريف (English)</span>
-                  <Badge variant="outline" className="text-xs">مهم للتعلم</Badge>
+          {/* معلومات أساسية */}
+          <Card>
+            <CardContent className="pt-4 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>النطق</Label>
+                  <Input
+                    value={pronunciation}
+                    onChange={(e) => setPronunciation(e.target.value)}
+                    placeholder="/ˈbjuːtɪfəl/"
+                  />
                 </div>
-              </Label>
-              <Textarea
-                id="definition"
-                placeholder="A clear definition in English..."
-                value={definition}
-                onChange={(e) => setDefinition(e.target.value)}
-                rows={2}
-                className="font-mono text-sm"
-              />
-            </div>
-
-            {/* Part of Speech and Level */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>نوع الكلمة (Part of Speech)</Label>
-                <Select value={partOfSpeech} onValueChange={setPartOfSpeech}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر النوع" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {partOfSpeechOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{option.label}</span>
-                          <span className="text-gray-400 text-xs">({option.labelAr})</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <Label>نوع الكلمة</Label>
+                  <Select value={partOfSpeech} onValueChange={setPartOfSpeech}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر النوع" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="noun">اسم (Noun)</SelectItem>
+                      <SelectItem value="verb">فعل (Verb)</SelectItem>
+                      <SelectItem value="adjective">صفة (Adjective)</SelectItem>
+                      <SelectItem value="adverb">ظرف (Adverb)</SelectItem>
+                      <SelectItem value="preposition">حرف جر</SelectItem>
+                      <SelectItem value="conjunction">حرف عطف</SelectItem>
+                      <SelectItem value="pronoun">ضمير</SelectItem>
+                      <SelectItem value="interjection">حرف تعجب</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>المستوى</Label>
+                  <Select value={level} onValueChange={setLevel}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="beginner">مبتدئ</SelectItem>
+                      <SelectItem value="intermediate">متوسط</SelectItem>
+                      <SelectItem value="advanced">متقدم</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-
+              
               <div className="space-y-2">
-                <Label>المستوى (Level)</Label>
-                <Select value={level} onValueChange={(v) => setLevel(v as 'beginner' | 'intermediate' | 'advanced')}>
+                <Label>التصنيف</Label>
+                <Select value={categoryId} onValueChange={setCategoryId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر المستوى" />
+                    <SelectValue placeholder="اختر التصنيف (اختياري)" />
                   </SelectTrigger>
                   <SelectContent>
-                    {levelOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div className="flex items-center gap-2">
-                          <Badge className={option.color}>{option.label}</Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Category with Add New Button */}
-            <div className="space-y-2">
-              <Label>التصنيف</Label>
-              <div className="flex gap-2">
-                <Select value={categoryId || "none"} onValueChange={(v) => setCategoryId(v === "none" ? "" : v)}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="اختر التصنيف" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">بدون تصنيف</SelectItem>
                     {categories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
-                          {cat.nameAr || cat.name}
-                        </div>
+                        {cat.nameAr || cat.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setIsCategoryDialogOpen(true)}
-                  title="إضافة تصنيف جديد"
-                >
-                  <FolderPlus className="w-4 h-4" />
-                </Button>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Synonyms & Antonyms */}
-            {(synonyms.length > 0 || antonyms.length > 0) && (
-              <div className="grid grid-cols-2 gap-4">
-                {synonyms.length > 0 && (
+          {/* تراكيب الفعل */}
+          {partOfSpeech === 'verb' && (
+            <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-900/10">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  تصريفات الفعل
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-1 text-emerald-600">
-                      <ArrowRightLeft className="w-3 h-3" />
-                      المرادفات (Synonyms)
-                    </Label>
-                    <div className="flex flex-wrap gap-1">
-                      {synonyms.map((syn, i) => (
-                        <Badge key={i} variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                          {syn}
-                        </Badge>
-                      ))}
-                    </div>
+                    <Label>الماضي (Past)</Label>
+                    <Input
+                      value={pastTense}
+                      onChange={(e) => setPastTense(e.target.value)}
+                      placeholder="worked"
+                    />
                   </div>
-                )}
-                {antonyms.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-1 text-rose-600">
-                      <ArrowRightLeft className="w-3 h-3 rotate-180" />
-                      الأضداد (Antonyms)
-                    </Label>
-                    <div className="flex flex-wrap gap-1">
-                      {antonyms.map((ant, i) => (
-                        <Badge key={i} variant="secondary" className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
-                          {ant}
-                        </Badge>
-                      ))}
-                    </div>
+                    <Label>التصريف الثالث (Past Participle)</Label>
+                    <Input
+                      value={pastParticiple}
+                      onChange={(e) => setPastParticiple(e.target.value)}
+                      placeholder="worked"
+                    />
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* Usage Notes */}
-            {usageNotes && (
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1 text-amber-600">
-                  <Lightbulb className="w-3 h-3" />
-                  ملاحظات الاستخدام
-                </Label>
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-sm text-gray-700 dark:text-gray-300">
-                  {usageNotes}
+                  <div className="space-y-2">
+                    <Label>المضارع (Present)</Label>
+                    <Input
+                      value={presentTense}
+                      onChange={(e) => setPresentTense(e.target.value)}
+                      placeholder="work"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>صيغة ing (Gerund)</Label>
+                    <Input
+                      value={gerund}
+                      onChange={(e) => setGerund(e.target.value)}
+                      placeholder="working"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>الغائب (Third Person)</Label>
+                    <Input
+                      value={thirdPerson}
+                      onChange={(e) => setThirdPerson(e.target.value)}
+                      placeholder="works"
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
+              </CardContent>
+            </Card>
+          )}
 
-            {/* Sentences */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
-                  <BookOpen className="w-4 h-4" />
-                  الجمل التوضيحية
-                </Label>
-                <Button variant="outline" size="sm" onClick={addSentence}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  إضافة جملة
-                </Button>
-              </div>
-
-              {sentences.length > 0 && (
-                <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                  {sentences.map((sentence, index) => (
-                    <motion.div
-                      key={sentence.id}
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="relative"
-                    >
-                      <Card className={cn(
-                        "border-0 bg-gray-50 dark:bg-gray-800/50",
-                        sentence.isAiGenerated && "border-l-2 border-l-violet-500"
-                      )}>
-                        <CardContent className="p-4 space-y-3">
-                          <Input
-                            placeholder="الجملة بالإنجليزية"
-                            value={sentence.sentence}
-                            onChange={(e) => updateSentence(index, 'sentence', e.target.value)}
-                            className="font-mono text-sm"
-                          />
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="الترجمة العربية"
-                              value={sentence.translation}
-                              onChange={(e) => updateSentence(index, 'translation', e.target.value)}
-                              className="flex-1"
-                            />
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeSentence(index)}
-                              className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 shrink-0"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                          {sentence.isAiGenerated && (
-                            <Badge variant="outline" className="text-violet-600 border-violet-300 text-xs">
-                              <Sparkles className="w-3 h-3 mr-1" />
-                              AI Generated
-                            </Badge>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
+          {/* تراكيب الاسم */}
+          {partOfSpeech === 'noun' && (
+            <Card className="border-purple-200 bg-purple-50/50 dark:bg-purple-900/10">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-600" />
+                  تصريفات الاسم
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>المفرد (Singular)</Label>
+                    <Input
+                      value={singular}
+                      onChange={(e) => setSingular(e.target.value)}
+                      placeholder="book"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>الجمع (Plural)</Label>
+                    <Input
+                      value={plural}
+                      onChange={(e) => setPlural(e.target.value)}
+                      placeholder="books"
+                    />
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
+              </CardContent>
+            </Card>
+          )}
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => handleOpenChange(false)}>
-              إلغاء
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={isLoading || !word.trim() || !translation.trim() || !!duplicateWarning}
-              className="bg-emerald-600 hover:bg-emerald-700"
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : (
-                <Plus className="w-4 h-4 mr-2" />
-              )}
-              إضافة الكلمة
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {/* تراكيب الصفة */}
+          {partOfSpeech === 'adjective' && (
+            <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-900/10">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  تصريفات الصفة
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>التفضيل (Comparative)</Label>
+                    <Input
+                      value={comparative}
+                      onChange={(e) => setComparative(e.target.value)}
+                      placeholder="bigger"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>أفعل التفضيل (Superlative)</Label>
+                    <Input
+                      value={superlative}
+                      onChange={(e) => setSuperlative(e.target.value)}
+                      placeholder="biggest"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>الظرف (Adverb)</Label>
+                    <Input
+                      value={adverb}
+                      onChange={(e) => setAdverb(e.target.value)}
+                      placeholder="quickly"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Add Category Dialog */}
-      <AddCategoryDialog
-        open={isCategoryDialogOpen}
-        onOpenChange={setIsCategoryDialogOpen}
-      />
-    </>
+          {/* زر إظهار/إخفاء التفاصيل المتقدمة */}
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+          >
+            {showAdvanced ? (
+              <>
+                <ChevronUp className="w-4 h-4 ml-2" />
+                إخفاء التفاصيل المتقدمة
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4 ml-2" />
+                إظهار التفاصيل المتقدمة
+              </>
+            )}
+          </Button>
+
+          {/* تفاصيل متقدمة */}
+          {showAdvanced && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-gray-600" />
+                  تفاصيل إضافية
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* الأمثلة */}
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2">
+                    <Lightbulb className="w-4 h-4 text-amber-500" />
+                    أمثلة
+                  </Label>
+                  <Input
+                    value={example1}
+                    onChange={(e) => setExample1(e.target.value)}
+                    placeholder="مثال 1: She is a beautiful girl."
+                  />
+                  <Input
+                    value={example2}
+                    onChange={(e) => setExample2(e.target.value)}
+                    placeholder="مثال 2: What a beautiful day!"
+                  />
+                </div>
+
+                <Separator />
+
+                {/* المرادفات والأضداد */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>المرادفات (مفصولة بفاصلة)</Label>
+                    <Input
+                      value={synonyms}
+                      onChange={(e) => setSynonyms(e.target.value)}
+                      placeholder="pretty, lovely, gorgeous"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>الأضداد (مفصولة بفاصلة)</Label>
+                    <Input
+                      value={antonyms}
+                      onChange={(e) => setAntonyms(e.target.value)}
+                      placeholder="ugly, unattractive"
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* معنى إضافي */}
+                <div className="space-y-2">
+                  <Label>معنى إضافي بالعربي</Label>
+                  <Textarea
+                    value={arabicMeaning}
+                    onChange={(e) => setArabicMeaning(e.target.value)}
+                    placeholder="شرح مفصل للكلمة بالعربي..."
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>سياق الاستخدام</Label>
+                  <Textarea
+                    value={context}
+                    onChange={(e) => setContext(e.target.value)}
+                    placeholder="متى وكيف تستخدم هذه الكلمة..."
+                    rows={2}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* أزرار الحفظ */}
+        <div className="flex gap-3 justify-end pt-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            إلغاء
+          </Button>
+          <Button
+            className="bg-emerald-600 hover:bg-emerald-700"
+            onClick={handleSubmit}
+            disabled={!word.trim() || !translation.trim()}
+          >
+            <Plus className="w-4 h-4 ml-2" />
+            إضافة الكلمة
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
