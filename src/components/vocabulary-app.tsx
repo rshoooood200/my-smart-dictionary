@@ -1334,7 +1334,7 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
         </DialogContent>
       </Dialog>
       
-        {/* Word Detail Dialog */}
+             {/* Word Detail Dialog */}
       <Dialog open={isWordDetailOpen} onOpenChange={setIsWordDetailOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {selectedWord && (
@@ -1395,6 +1395,9 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
                     <div className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
                       {selectedWord.translation}
                     </div>
+                    {selectedWord.arabicMeaning && (
+                      <p className="text-gray-600 dark:text-gray-400 mb-4">{selectedWord.arabicMeaning}</p>
+                    )}
                     <div className="flex flex-wrap gap-2">
                       {selectedWord.partOfSpeech && (
                         <Badge className="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 rounded-lg px-3 py-1">
@@ -1437,6 +1440,135 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
                   </Card>
                 )}
 
+                {/* Context */}
+                {selectedWord.context && (
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                        <Target className="w-5 h-5 text-blue-600" />
+                        السياق
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-600 dark:text-gray-400">{selectedWord.context}</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Verb Forms */}
+                {selectedWord.verbForms && (selectedWord.verbForms.past || selectedWord.verbForms.pastParticiple || selectedWord.verbForms.present || selectedWord.verbForms.gerund || selectedWord.verbForms.thirdPerson) && (
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                        <Zap className="w-5 h-5 text-orange-600" />
+                        تصريفات الفعل
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {selectedWord.verbForms.past && (
+                          <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
+                            <div className="text-xs text-gray-500 mb-1">الماضي</div>
+                            <div className="font-bold text-orange-700 dark:text-orange-400">{selectedWord.verbForms.past}</div>
+                          </div>
+                        )}
+                        {selectedWord.verbForms.pastParticiple && (
+                          <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
+                            <div className="text-xs text-gray-500 mb-1">التصريف الثالث</div>
+                            <div className="font-bold text-orange-700 dark:text-orange-400">{selectedWord.verbForms.pastParticiple}</div>
+                          </div>
+                        )}
+                        {selectedWord.verbForms.present && (
+                          <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
+                            <div className="text-xs text-gray-500 mb-1">المضارع</div>
+                            <div className="font-bold text-orange-700 dark:text-orange-400">{selectedWord.verbForms.present}</div>
+                          </div>
+                        )}
+                        {selectedWord.verbForms.gerund && (
+                          <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
+                            <div className="text-xs text-gray-500 mb-1">ing form</div>
+                            <div className="font-bold text-orange-700 dark:text-orange-400">{selectedWord.verbForms.gerund}</div>
+                          </div>
+                        )}
+                        {selectedWord.verbForms.thirdPerson && (
+                          <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
+                            <div className="text-xs text-gray-500 mb-1">الغائب</div>
+                            <div className="font-bold text-orange-700 dark:text-orange-400">{selectedWord.verbForms.thirdPerson}</div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Noun Forms */}
+                {selectedWord.nounForms && (selectedWord.nounForms.singular || selectedWord.nounForms.plural) && (
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                        <Zap className="w-5 h-5 text-teal-600" />
+                        تصريفات الاسم
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {selectedWord.nounForms.singular && (
+                          <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg text-center">
+                            <div className="text-xs text-gray-500 mb-1">المفرد</div>
+                            <div className="font-bold text-teal-700 dark:text-teal-400">{selectedWord.nounForms.singular}</div>
+                          </div>
+                        )}
+                        {selectedWord.nounForms.plural && (
+                          <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg text-center">
+                            <div className="text-xs text-gray-500 mb-1">الجمع</div>
+                            <div className="font-bold text-teal-700 dark:text-teal-400">{selectedWord.nounForms.plural}</div>
+                          </div>
+                        )}
+                        {selectedWord.nounForms.countable !== undefined && (
+                          <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg text-center">
+                            <div className="text-xs text-gray-500 mb-1">قابل للعد</div>
+                            <div className="font-bold text-teal-700 dark:text-teal-400">{selectedWord.nounForms.countable ? 'نعم' : 'لا'}</div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Adjective Forms */}
+                {selectedWord.adjectiveForms && (selectedWord.adjectiveForms.comparative || selectedWord.adjectiveForms.superlative || selectedWord.adjectiveForms.adverb) && (
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                        <Zap className="w-5 h-5 text-pink-600" />
+                        تصريفات الصفة
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {selectedWord.adjectiveForms.comparative && (
+                          <div className="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg text-center">
+                            <div className="text-xs text-gray-500 mb-1">تفضيل</div>
+                            <div className="font-bold text-pink-700 dark:text-pink-400">{selectedWord.adjectiveForms.comparative}</div>
+                          </div>
+                        )}
+                        {selectedWord.adjectiveForms.superlative && (
+                          <div className="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg text-center">
+                            <div className="text-xs text-gray-500 mb-1">أفعل التفضيل</div>
+                            <div className="font-bold text-pink-700 dark:text-pink-400">{selectedWord.adjectiveForms.superlative}</div>
+                          </div>
+                        )}
+                        {selectedWord.adjectiveForms.adverb && (
+                          <div className="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg text-center">
+                            <div className="text-xs text-gray-500 mb-1">الظرف</div>
+                            <div className="font-bold text-pink-700 dark:text-pink-400">{selectedWord.adjectiveForms.adverb}</div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Examples */}
                 {selectedWord.examples && selectedWord.examples.length > 0 && (
                   <Card className="border-0 shadow-sm">
@@ -1447,15 +1579,42 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         {selectedWord.examples.map((example, index) => (
                           <div 
                             key={index} 
-                            className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border-r-4 border-emerald-500"
+                            className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border-r-4 border-emerald-500"
                           >
-                            <p className="text-gray-800 dark:text-gray-200 font-medium">{example.en}</p>
-                            {example.ar && (
-                              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{example.ar}</p>
+                            <p className="text-gray-800 dark:text-gray-200">{example}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Sentences */}
+                {selectedWord.sentences && selectedWord.sentences.length > 0 && (
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                        <AlignLeft className="w-5 h-5 text-blue-600" />
+                        الجمل
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {selectedWord.sentences.map((sentence, index) => (
+                          <div 
+                            key={sentence.id || index} 
+                            className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-r-4 border-blue-500"
+                          >
+                            <p className="text-gray-800 dark:text-gray-200 font-medium">{sentence.sentence}</p>
+                            {sentence.translation && (
+                              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{sentence.translation}</p>
+                            )}
+                            {sentence.isAiGenerated && (
+                              <Badge variant="secondary" className="mt-2 text-xs">مُولّد بالذكاء الاصطناعي</Badge>
                             )}
                           </div>
                         ))}
@@ -1515,40 +1674,18 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
                   )}
                 </div>
 
-                {/* Sentences */}
-                {selectedWord.sentences && selectedWord.sentences.length > 0 && (
-                  <Card className="border-0 shadow-sm">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                        <AlignLeft className="w-5 h-5 text-emerald-600" />
-                        جمل إضافية
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {selectedWord.sentences.map((sentence, index) => (
-                          <div key={index} className="flex items-start gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                            <span className="text-emerald-600 font-bold">{index + 1}.</span>
-                            <span className="text-gray-700 dark:text-gray-300">{sentence}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Notes */}
-                {selectedWord.notes && (
+                {/* Usage Notes */}
+                {selectedWord.usageNotes && (
                   <Card className="border-0 shadow-sm">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-base flex items-center gap-2 text-gray-700 dark:text-gray-300">
                         <StickyNote className="w-5 h-5 text-amber-600" />
-                        ملاحظات
+                        ملاحظات الاستخدام
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <p className="text-gray-600 dark:text-gray-400 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg">
-                        {selectedWord.notes}
+                        {selectedWord.usageNotes}
                       </p>
                     </CardContent>
                   </Card>
