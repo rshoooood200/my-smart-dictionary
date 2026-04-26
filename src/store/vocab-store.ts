@@ -33,6 +33,32 @@ export interface Word {
   partOfSpeech?: string | null
   level: string
   isLearned: boolean
+    // تراكيب الفعل
+  verbForms?: {
+    past?: string              // الماضي - worked
+    pastParticiple?: string    // التصريف الثالث - worked
+    present?: string           // المضارع - works
+    gerund?: string            // ing form - working
+    thirdPerson?: string       // الغائب - works
+  }
+  // تراكيب الاسم
+  nounForms?: {
+    singular?: string          // المفرد
+    plural?: string            // الجمع
+    countable?: boolean        // قابل للعد
+  }
+  // تراكيب الصفة
+  adjectiveForms?: {
+    comparative?: string       // تفضيل - bigger
+    superlative?: string       // أفعل التفضيل - biggest
+    adverb?: string            // الظرف - quickly
+  }
+  // معلومات إضافية
+  examples?: string[]          // أمثلة
+  synonyms?: string[]          // مرادفات
+  antonyms?: string[]          // أضداد
+  arabicMeaning?: string       // المعنى بالعربي
+  context?: string             // السياق
   isFavorite: boolean
   reviewCount: number
   correctCount: number
