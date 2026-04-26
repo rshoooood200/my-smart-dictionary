@@ -88,9 +88,31 @@ model Word {
   nextReviewAt   DateTime?
   
   // Spaced Repetition (SM-2 Algorithm)
-  easeFactor     Float       @default(2.5)    // عامل السهولة (1.3 - 3.0+)
-  interval       Int         @default(0)      // الفاصل الزمني بالأيام
-  repetitions    Int         @default(0)      // عدد التكرارات المتتالية الصحيحة
+  easeFactor     Float       @default(2.5)
+  interval       Int         @default(0)
+  repetitions    Int         @default(0)
+  
+  // حقول جديدة - تصريفات الفعل
+  verbPast           String?
+  verbPastParticiple String?
+  verbPresent        String?
+  verbGerund         String?
+  verbThirdPerson    String?
+  
+  // حقول جديدة - تصريفات الاسم
+  nounSingular String?
+  nounPlural   String?
+  nounCountable Boolean @default(true)
+  
+  // حقول جديدة - تصريفات الصفة
+  adjComparative String?
+  adjSuperlative String?
+  adjAdverb      String?
+  
+  // حقول جديدة - معلومات إضافية
+  examples      String      @default("[]")
+  arabicMeaning String?
+  context       String?
   
   categoryId     String?
   userId         String
