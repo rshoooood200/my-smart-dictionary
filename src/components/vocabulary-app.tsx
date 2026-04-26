@@ -1334,7 +1334,7 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
         </DialogContent>
       </Dialog>
       
-      {/* Word Detail Dialog */}
+    {/* Word Detail Dialog */}
       <Dialog open={isWordDetailOpen} onOpenChange={setIsWordDetailOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           {selectedWord && (
@@ -1348,8 +1348,26 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
                 </div>
                 {selectedWord.pronunciation && <p className="text-gray-500">/{selectedWord.pronunciation}/</p>}
               </DialogHeader>
+              
               <div className="space-y-4">
+                {/* الترجمة */}
                 <p className="text-xl text-gray-700 dark:text-gray-300">{selectedWord.translation}</p>
+                
+                {/* المعنى المفصل */}
+                {selectedWord.arabicMeaning && (
+                  <p className="text-gray-600 text-sm bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                    {selectedWord.arabicMeaning}
+                  </p>
+                )}
+                
+                {/* التعريف بالإنجليزي */}
+                {selectedWord.definition && (
+                  <p className="text-gray-500 text-sm italic">
+                    Definition: {selectedWord.definition}
+                  </p>
+                )}
+                
+                {/* الأنواع والمستوى والتصنيف */}
                 <div className="flex flex-wrap gap-2">
                   {selectedWord.partOfSpeech && <Badge variant="secondary">{partOfSpeechLabels[selectedWord.partOfSpeech]}</Badge>}
                   <Badge className={levelConfig[selectedWord.level]?.bg}>{levelConfig[selectedWord.level]?.label}</Badge>
@@ -1359,7 +1377,177 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
                     </Badge>
                   )}
                 </div>
+
+                {/* تراكيب الفعل */}
+                {selectedWord.verbForms && (selectedWord.verbForms.past || selectedWord.verbForms.pastParticiple || selectedWord.verbForms.gerund || selectedWord.verbForms.thirdPerson) && (
+                  <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-900/20">
+                    <CardHeader className="pb-2 pt-3 px-4">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-blue-600" />
+                        تصريفات الفعل
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {selectedWord.verbForms.past && (
+                          <div className="text-center p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                            <div className="text-xs text-gray-500 mb-1">الماضي</div>
+                            <div className="font-bold text-blue-700 dark:text-blue-400">{selectedWord.verbForms.past}</div>
+                          </div>
+                        )}
+                        {selectedWord.verbForms.pastParticiple && (
+                          <div className="text-center p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                            <div className="text-xs text-gray-500 mb-1">التصريف الثالث</div>
+                            <div className="font-bold text-blue-700 dark:text-blue-400">{selectedWord.verbForms.pastParticiple}</div>
+                          </div>
+                        )}
+                        {selectedWord.verbForms.present && (
+                          <div className="text-center p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                            <div className="text-xs text-gray-500 mb-1">المضارع</div>
+                            <div className="font-bold text-blue-700 dark:text-blue-400">{selectedWord.verbForms.present}</div>
+                          </div>
+                        )}
+                        {selectedWord.verbForms.gerund && (
+                          <div className="text-center p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                            <div className="text-xs text-gray-500 mb-1">صيغة ing</div>
+                            <div className="font-bold text-blue-700 dark:text-blue-400">{selectedWord.verbForms.gerund}</div>
+                          </div>
+                        )}
+                        {selectedWord.verbForms.thirdPerson && (
+                          <div className="text-center p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                            <div className="text-xs text-gray-500 mb-1">الغائب</div>
+                            <div className="font-bold text-blue-700 dark:text-blue-400">{selectedWord.verbForms.thirdPerson}</div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* تراكيب الاسم */}
+                {selectedWord.nounForms && (selectedWord.nounForms.singular || selectedWord.nounForms.plural) && (
+                  <Card className="border-purple-200 bg-purple-50/50 dark:bg-purple-900/20">
+                    <CardHeader className="pb-2 pt-3 px-4">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-purple-600" />
+                        تصريفات الاسم
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        {selectedWord.nounForms.singular && (
+                          <div className="text-center p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                            <div className="text-xs text-gray-500 mb-1">المفرد</div>
+                            <div className="font-bold text-purple-700 dark:text-purple-400">{selectedWord.nounForms.singular}</div>
+                          </div>
+                        )}
+                        {selectedWord.nounForms.plural && (
+                          <div className="text-center p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                            <div className="text-xs text-gray-500 mb-1">الجمع</div>
+                            <div className="font-bold text-purple-700 dark:text-purple-400">{selectedWord.nounForms.plural}</div>
+                          </div>
+                        )}
+                      </div>
+                      {selectedWord.nounForms.countable !== undefined && (
+                        <div className="mt-2 text-center text-xs text-gray-500">
+                          {selectedWord.nounForms.countable ? '✓ قابل للعد' : '✗ غير قابل للعد'}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* تراكيب الصفة */}
+                {selectedWord.adjectiveForms && (selectedWord.adjectiveForms.comparative || selectedWord.adjectiveForms.superlative || selectedWord.adjectiveForms.adverb) && (
+                  <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-900/20">
+                    <CardHeader className="pb-2 pt-3 px-4">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-600" />
+                        تصريفات الصفة
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        {selectedWord.adjectiveForms.comparative && (
+                          <div className="text-center p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                            <div className="text-xs text-gray-500 mb-1">التفضيل</div>
+                            <div className="font-bold text-amber-700 dark:text-amber-400">{selectedWord.adjectiveForms.comparative}</div>
+                          </div>
+                        )}
+                        {selectedWord.adjectiveForms.superlative && (
+                          <div className="text-center p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                            <div className="text-xs text-gray-500 mb-1">أفعل التفضيل</div>
+                            <div className="font-bold text-amber-700 dark:text-amber-400">{selectedWord.adjectiveForms.superlative}</div>
+                          </div>
+                        )}
+                        {selectedWord.adjectiveForms.adverb && (
+                          <div className="text-center p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                            <div className="text-xs text-gray-500 mb-1">الظرف</div>
+                            <div className="font-bold text-amber-700 dark:text-amber-400">{selectedWord.adjectiveForms.adverb}</div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* الأمثلة */}
+                {selectedWord.examples && selectedWord.examples.length > 0 && (
+                  <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-900/20">
+                    <CardHeader className="pb-2 pt-3 px-4">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Lightbulb className="w-4 h-4 text-emerald-600" />
+                        أمثلة
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-3">
+                      <ul className="space-y-2">
+                        {selectedWord.examples.map((example, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm">
+                            <span className="text-emerald-600 font-bold shrink-0">•</span>
+                            <span>{example}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* المرادفات والأضداد */}
+                <div className="grid grid-cols-2 gap-3">
+                  {selectedWord.synonyms && selectedWord.synonyms.length > 0 && (
+                    <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <div className="text-xs text-green-600 mb-2 font-medium">المرادفات</div>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedWord.synonyms.map((syn, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-300">
+                            {syn}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedWord.antonyms && selectedWord.antonyms.length > 0 && (
+                    <div className="p-3 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
+                      <div className="text-xs text-rose-600 mb-2 font-medium">الأضداد</div>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedWord.antonyms.map((ant, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs bg-rose-100 text-rose-700 dark:bg-rose-800 dark:text-rose-300">
+                            {ant}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* إحصائيات الكلمة */}
+                <div className="flex items-center justify-between text-sm text-gray-500 pt-2 border-t">
+                  <span>الدقة: {selectedWord.reviewCount > 0 ? Math.round((selectedWord.correctCount / selectedWord.reviewCount) * 100) : 0}%</span>
+                  <span>المراجعات: {selectedWord.reviewCount || 0}</span>
+                </div>
                 
+                {/* تغيير التصنيف */}
                 <div className="space-y-2">
                   <Label className="text-sm text-gray-500 flex items-center gap-1"><FolderOpen className="w-4 h-4" />تغيير التصنيف</Label>
                   <Select value={selectedWord.categoryId || "none"} onValueChange={(v) => { const newCategoryId = v === "none" ? undefined : v; updateWord(selectedWord.id, { categoryId: newCategoryId }); setSelectedWord({ ...selectedWord, categoryId: newCategoryId }); toast.success('تم تحديث التصنيف'); }}>
@@ -1371,7 +1559,8 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
                   </Select>
                 </div>
 
-                <div className="flex gap-2 pt-4">
+                {/* أزرار الإجراءات */}
+                <div className="flex gap-2 pt-2">
                   <Button variant={selectedWord.isFavorite ? "default" : "outline"} className="flex-1" onClick={() => { toggleFavorite(selectedWord.id); setSelectedWord({ ...selectedWord, isFavorite: !selectedWord.isFavorite }); toast.success(selectedWord.isFavorite ? 'تمت الإزالة من المفضلة' : 'تمت الإضافة للمفضلة'); }}>
                     <Star className={cn("w-4 h-4 mr-2", selectedWord.isFavorite && "fill-current")} />{selectedWord.isFavorite ? 'إزالة من المفضلة' : 'إضافة للمفضلة'}
                   </Button>
