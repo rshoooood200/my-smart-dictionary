@@ -57,11 +57,29 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // تحويل البيانات لإضافة synonyms و antonyms كـ arrays
+    // تحويل البيانات لإضافة جميع الحقول كـ arrays/objects
     const wordsWithArrays = words.map(w => ({
       ...w,
       synonyms: JSON.parse(w.synonyms || '[]'),
       antonyms: JSON.parse(w.antonyms || '[]'),
+      examples: JSON.parse(w.examples || '[]'),
+      verbForms: {
+        past: w.verbPast,
+        pastParticiple: w.verbPastParticiple,
+        present: w.verbPresent,
+        gerund: w.verbGerund,
+        thirdPerson: w.verbThirdPerson,
+      },
+      nounForms: {
+        singular: w.nounSingular,
+        plural: w.nounPlural,
+        countable: w.nounCountable,
+      },
+      adjectiveForms: {
+        comparative: w.adjComparative,
+        superlative: w.adjSuperlative,
+        adverb: w.adjAdverb,
+      },
     }));
 
     return NextResponse.json({ success: true, data: wordsWithArrays });
@@ -81,7 +99,10 @@ export async function POST(request: NextRequest) {
     const { 
       word, translation, pronunciation, definition, 
       partOfSpeech, level, categoryId, sentences, 
-      synonyms, antonyms, usageNotes, userId 
+      synonyms, antonyms, usageNotes, userId,
+      // حقول جديدة
+      verbForms, nounForms, adjectiveForms,
+      examples, arabicMeaning, context
     } = body;
 
     if (!userId) {
@@ -123,7 +144,7 @@ export async function POST(request: NextRequest) {
     // تنظيف categoryId - إذا كان فارغاً اجعله null
     const cleanCategoryId = categoryId && categoryId.trim() !== '' ? categoryId.trim() : null;
 
-    // إنشاء الكلمة مع الجمل إن وجدت
+    // إنشاء الكلمة مع جميع الحقول
     const newWord = await db.word.create({
       data: {
         word: wordText,
@@ -137,6 +158,24 @@ export async function POST(request: NextRequest) {
         synonyms: JSON.stringify(synonyms || []),
         antonyms: JSON.stringify(antonyms || []),
         usageNotes: usageNotes?.trim() || null,
+        // حقول جديدة - تصريفات الفعل
+        verbPast: verbForms?.past?.trim() || null,
+        verbPastParticiple: verbForms?.pastParticiple?.trim() || null,
+        verbPresent: verbForms?.present?.trim() || null,
+        verbGerund: verbForms?.gerund?.trim() || null,
+        verbThirdPerson: verbForms?.thirdPerson?.trim() || null,
+        // حقول جديدة - تصريفات الاسم
+        nounSingular: nounForms?.singular?.trim() || null,
+        nounPlural: nounForms?.plural?.trim() || null,
+        nounCountable: nounForms?.countable ?? true,
+        // حقول جديدة - تصريفات الصفة
+        adjComparative: adjectiveForms?.comparative?.trim() || null,
+        adjSuperlative: adjectiveForms?.superlative?.trim() || null,
+        adjAdverb: adjectiveForms?.adverb?.trim() || null,
+        // حقول جديدة - معلومات إضافية
+        examples: JSON.stringify(examples || []),
+        arabicMeaning: arabicMeaning?.trim() || null,
+        context: context?.trim() || null,
         // إضافة الجمل إن وجدت
         ...(sentences && sentences.length > 0 && {
           sentences: {
@@ -174,6 +213,24 @@ export async function POST(request: NextRequest) {
         ...newWord,
         synonyms: JSON.parse(newWord.synonyms || '[]'),
         antonyms: JSON.parse(newWord.antonyms || '[]'),
+        examples: JSON.parse(newWord.examples || '[]'),
+        verbForms: {
+          past: newWord.verbPast,
+          pastParticiple: newWord.verbPastParticiple,
+          present: newWord.verbPresent,
+          gerund: newWord.verbGerund,
+          thirdPerson: newWord.verbThirdPerson,
+        },
+        nounForms: {
+          singular: newWord.nounSingular,
+          plural: newWord.nounPlural,
+          countable: newWord.nounCountable,
+        },
+        adjectiveForms: {
+          comparative: newWord.adjComparative,
+          superlative: newWord.adjSuperlative,
+          adverb: newWord.adjAdverb,
+        },
       }
     });
   } catch (error) {
