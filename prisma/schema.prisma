@@ -92,24 +92,24 @@ model Word {
   interval       Int         @default(0)
   repetitions    Int         @default(0)
   
-  // حقول جديدة - تصريفات الفعل
+  // تصريفات الفعل
   verbPast           String?
   verbPastParticiple String?
   verbPresent        String?
   verbGerund         String?
   verbThirdPerson    String?
   
-  // حقول جديدة - تصريفات الاسم
+  // تصريفات الاسم
   nounSingular String?
   nounPlural   String?
   nounCountable Boolean @default(true)
   
-  // حقول جديدة - تصريفات الصفة
+  // تصريفات الصفة
   adjComparative String?
   adjSuperlative String?
   adjAdverb      String?
   
-  // حقول جديدة - معلومات إضافية
+  // معلومات إضافية
   examples      String      @default("[]")
   arabicMeaning String?
   context       String?
@@ -133,7 +133,6 @@ model Word {
   @@index([userId, isLearned])
   @@index([userId, isFavorite])
 }
-
 model Sentence {
   id            String   @id @default(cuid())
   sentence      String
