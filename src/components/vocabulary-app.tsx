@@ -11,7 +11,7 @@ import {
   Flame, LogOut, VolumeX, ChevronRight, ChevronLeft, ChevronDown,
   Trophy, Clock, Shuffle, Lightbulb, Heart, Sparkles, FolderOpen, MessageSquare, FileText, Loader2, StickyNote,
   Keyboard, AlignLeft, Headphones, Timer, GraduationCap, Mic, Database, List, Route, Bell, BarChart3,
-  Tv, Newspaper, Quote, Puzzle, CalendarDays, Video, Podcast, Wifi, WifiOff, LucideIcon
+  Tv, Newspaper, Quote, Puzzle, CalendarDays, Video, Podcast, Wifi, WifiOff, LucideIcon, Trash2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
