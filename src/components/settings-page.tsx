@@ -31,7 +31,7 @@ const settingsSections: SettingsSection[] = [
   {
     id: 'general',
     label: 'الإعدادات العامة',
-    description: 'المظهر، المراجعة، الإشعارات، الاختصارات',
+    description: 'المظهر، المراجعة ، الاختصارات',
     icon: Settings,
     color: 'text-violet-600',
     gradient: 'from-violet-500 to-purple-600'
