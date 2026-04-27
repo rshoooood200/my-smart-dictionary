@@ -57,6 +57,7 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
   const [synonyms, setSynonyms] = useState('')
   const [antonyms, setAntonyms] = useState('')
   const [arabicMeaning, setArabicMeaning] = useState('')
+  const [englishDefinition, setEnglishDefinition] = useState('')
   const [context, setContext] = useState('')
   
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -65,6 +66,7 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
   const resetForm = () => {
     setWord('')
     setTranslation('')
+    setEnglishDefinition('')
     setPronunciation('')
     setPartOfSpeech('')
     setLevel('beginner')
@@ -93,6 +95,7 @@ const handleGenerateInfo = async () => {
   if (!word.trim()) {
     toast.error('الرجاء إدخال الكلمة أولاً')
     return
+    if (data.definition) setEnglishDefinition(data.definition)
   }
   
   setIsGenerating(true)
@@ -185,6 +188,7 @@ const handleGenerateInfo = async () => {
     addWord({
       word: word.trim(),
       translation: translation.trim(),
+      definition: englishDefinition.trim() || undefined,
       pronunciation: pronunciation.trim() || undefined,
       partOfSpeech: partOfSpeech || undefined,
       level,
@@ -345,6 +349,15 @@ const handleGenerateInfo = async () => {
               </div>
             </CardContent>
           </Card>
+          <div className="space-y-2">
+  <Label>التعريف بالإنجليزي</Label>
+  <Textarea
+    value={englishDefinition}
+    onChange={(e) => setEnglishDefinition(e.target.value)}
+    placeholder="The definition of the word in English..."
+    rows={2}
+  />
+</div>
 
           {/* تراكيب الفعل */}
           {partOfSpeech === 'verb' && (
