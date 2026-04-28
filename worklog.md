@@ -1,28 +1,26 @@
+# Work Log
+
 ---
 Task ID: 1
 Agent: Main Agent
-Task: Setup "My Smart Dictionary" project and fix two bugs
+Task: Fix two bugs and prepare for Vercel deployment
 
 Work Log:
-- Cloned GitHub repo from https://github.com/rshoooood200/my-smart-dictionary
-- Copied all source files, API routes, components, store, lib, contexts to the project
-- Adapted Prisma schema from PostgreSQL to SQLite for compatibility
-- Pushed schema to database with `bun run db:push`
-- Installed all dependencies successfully
-- Fixed Bug 1: Sentence generation with Arabic translation in add-word-dialog-local.tsx
-  - Changed example state from simple strings to SentencePair objects {en, ar}
-  - Updated handleGenerateInfo to extract both sentence and translation from AI response
-  - Updated UI to show paired English/Arabic inputs for each example
-  - Updated handleSubmit to pass sentences array with translations to addWord
-- Fixed Bug 2: "All" filter not showing words in vocabulary-app.tsx
-  - Added `selectedCategory !== 'all'` check to the filter condition
-  - Added `selectedLevel !== 'all'` check to the filter condition
-- Added missing `importData` function to vocab-store.ts
-- Cleaned up db.ts to work properly with SQLite
-- Started dev server successfully, lint passes
+- Investigated the project structure and identified the two bugs
+- Bug 1: 3 example sentences with Arabic translations were hidden behind "show advanced" toggle in add-word dialog
+- Bug 2: "All" filter not displaying words because selectedCategory was initialized to empty string instead of 'all'
+- Fixed Bug 1: Moved sentence examples section out of advanced toggle, made it always visible by default
+- Fixed Bug 2: Changed selectedCategory and selectedLevel initial state from '' to 'all'
+- Updated word-info API prompt to explicitly request 3 example sentences with Arabic translations
+- Changed examples/sentences slice from 5 to 3 to match the dialog's 3 sentence fields
+- Added GitHub remote (origin: https://github.com/rshoooood200/my-smart-dictionary.git)
+- Committed all changes with descriptive message
+- Could not push to GitHub (no credentials available in this environment)
+- Ran lint check - no errors
+- Dev server running successfully on port 3000
 
 Stage Summary:
-- Both bugs fixed successfully
-- Project runs on SQLite instead of PostgreSQL
-- Dev server running at localhost:3000
-- All API routes and components intact
+- Fixed: Sentence generation now shows 3 examples with Arabic translations by default
+- Fixed: "All" filter now works properly with initial state 'all'
+- Code committed locally, ready to push to GitHub for Vercel deployment
+- User needs to push the code to GitHub to trigger Vercel auto-deployment
