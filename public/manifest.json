@@ -1,0 +1,32 @@
+{
+  "name": "قاموسي الذكي",
+  "short_name": "قاموسي",
+  "description": "تطبيق ذكي لحفظ ومراجعة الكلمات الإنجليزية",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#10b981",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/app-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/app-icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "lang": "ar",
+  "dir": "rtl",
+  "prefer_related_applications": false
+}

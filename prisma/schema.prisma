@@ -1,0 +1,1160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  password       String?
+  name           String?
+  avatar         String?
+  xp             Int             @default(0)
+  level          Int             @default(1)
+  currentStreak  Int             @default(0)
+  longestStreak  Int             @default(0)
+  lastActiveDate DateTime?
+  achievements   String          @default("[]")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  categories     Category[]
+  notes          Note[]
+  reviewSessions ReviewSession[]
+  stories        Story[]
+  words          Word[]
+  customLists    CustomList[]
+  learningProgress LearningProgress[]
+  userAchievements UserAchievement[]
+  goals         UserGoal[]
+  weeklyReports WeeklyReport[]
+  notifications  Notification[]
+  notificationSetting NotificationSetting?
+  reminderSchedules ReminderSchedule[]
+  
+  friendRequests  Friendship[] @relation("FriendRequests")
+  friendAddresses Friendship[] @relation("FriendAddresses")
+  createdChallenges  Challenge[] @relation("ChallengeCreator")
+  opponentChallenges Challenge[]  @relation("ChallengeOpponent")
+  wonChallenges      Challenge[]  @relation("ChallengeWinner")
+  leaderboards   Leaderboard[]
+  communityLists CommunityList[]
+  
+  dailyAnalytics   DailyAnalytics[]
+  categoryStrengths CategoryStrength[]
+  learningSessions LearningSession[]
+  userCurrency     UserCurrency?
+  userItems        UserItem[]
+  dailyRewards     DailyReward[]
+  
+  @@index([email])
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  nameAr    String?
+  color     String   @default("#10B981")
+  icon      String?
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  words     Word[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model Word {
+  id             String      @id @default(cuid())
+  word           String
+  translation    String
+  pronunciation  String?
+  definition     String?
+  partOfSpeech   String?
+  level          String      @default("beginner")
+  isLearned      Boolean     @default(false)
+  isFavorite     Boolean     @default(false)
+  reviewCount    Int         @default(0)
+  correctCount   Int         @default(0)
+  lastReviewedAt DateTime?
+  nextReviewAt   DateTime?
+  
+  easeFactor     Float       @default(2.5)
+  interval       Int         @default(0)
+  repetitions    Int         @default(0)
+  
+  verbPast           String?
+  verbPastParticiple String?
+  verbPresent        String?
+  verbGerund         String?
+  verbThirdPerson    String?
+  
+  nounSingular String?
+  nounPlural   String?
+  nounCountable Boolean @default(true)
+  
+  adjComparative String?
+  adjSuperlative String?
+  adjAdverb      String?
+  
+  examples      String      @default("[]")
+  arabicMeaning String?
+  context       String?
+  
+  categoryId     String?
+  userId         String
+  synonyms       String      @default("[]")
+  antonyms       String      @default("[]")
+  usageNotes     String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  sentences      Sentence[]
+  storyWords     StoryWord[]
+  listWords      CustomListWord[]
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category       Category?   @relation(fields: [categoryId], references: [id])
+
+  @@unique([userId, word])
+  @@index([userId])
+  @@index([userId, categoryId])
+  @@index([userId, isLearned])
+  @@index([userId, isFavorite])
+}
+
+model Sentence {
+  id            String   @id @default(cuid())
+  sentence      String
+  translation   String
+  wordId        String
+  isAiGenerated Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  word          Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@index([wordId])
+}
+
+model ReviewSession {
+  id           String   @id @default(cuid())
+  totalWords   Int      @default(0)
+  correctCount Int      @default(0)
+  wrongCount   Int      @default(0)
+  duration     Int      @default(0)
+  sessionType  String   @default("flashcard")
+  userId       String
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model DailyStats {
+  id             String   @id @default(cuid())
+  date           DateTime
+  userId         String
+  wordsAdded     Int      @default(0)
+  wordsReviewed  Int      @default(0)
+  correctAnswers Int      @default(0)
+  wrongAnswers   Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+model Story {
+  id              String          @id @default(cuid())
+  title           String
+  titleAr         String?
+  content         String
+  contentAr       String?
+  level           String          @default("beginner")
+  readingTime     Int             @default(0)
+  wordCount       Int             @default(0)
+  savedWordsCount Int             @default(0)
+  isAiGenerated   Boolean         @default(false)
+  isFavorite      Boolean         @default(false)
+  isRead          Boolean         @default(false)
+  userId          String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions       StoryQuestion[]
+  storyWords      StoryWord[]
+
+  @@index([userId])
+  @@index([userId, level])
+  @@index([userId, isFavorite])
+  @@index([userId, isRead])
+}
+
+model StoryWord {
+  id        String   @id @default(cuid())
+  storyId   String
+  wordId    String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  word      Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, wordId])
+  @@index([storyId])
+  @@index([wordId])
+}
+
+model StoryQuestion {
+  id         String   @id @default(cuid())
+  storyId    String
+  question   String
+  questionAr String?
+  options    String
+  answer     Int      @default(0)
+  createdAt  DateTime @default(now())
+  story      Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@index([storyId])
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  title      String
+  content    String
+  color      String   @default("#10B981")
+  isPinned   Boolean  @default(false)
+  isArchived Boolean  @default(false)
+  tags       String   @default("[]")
+  userId     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isPinned])
+  @@index([userId, isArchived])
+}
+
+model CustomList {
+  id          String   @id @default(cuid())
+  name        String
+  nameAr      String?
+  description String?
+  color       String   @default("#10B981")
+  icon        String?
+  isPublic    Boolean  @default(false)
+  isTemplate  Boolean  @default(false)
+  tags        String   @default("[]")
+  wordCount   Int      @default(0)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listWords   CustomListWord[]
+
+  @@index([userId])
+  @@index([userId, isPublic])
+  @@index([userId, isTemplate])
+}
+
+model CustomListWord {
+  id        String   @id @default(cuid())
+  listId    String
+  wordId    String
+  order     Int      @default(0)
+  notes     String?
+  createdAt DateTime @default(now())
+  list      CustomList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  word      Word      @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, wordId])
+  @@index([listId])
+  @@index([wordId])
+}
+
+model LearningPath {
+  id            String   @id @default(cuid())
+  title         String
+  titleAr       String?
+  description   String?
+  descriptionAr String?
+  level         String   @default("beginner")
+  category      String?
+  icon          String?
+  color         String   @default("#10B981")
+  isPublic      Boolean  @default(false)
+  isTemplate    Boolean  @default(false)
+  estimatedDays Int      @default(30)
+  totalLessons  Int      @default(0)
+  totalWords    Int      @default(0)
+  userId        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lessons       LearningLesson[]
+  progress      LearningProgress[]
+
+  @@index([userId])
+  @@index([isPublic])
+  @@index([isTemplate])
+}
+
+model LearningLesson {
+  id           String   @id @default(cuid())
+  pathId       String
+  title        String
+  titleAr      String?
+  description  String?
+  descriptionAr String?
+  order        Int      @default(0)
+  duration     Int      @default(15)
+  wordCount    Int      @default(0)
+  content      String   @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  path         LearningPath @relation(fields: [pathId], references: [id], onDelete: Cascade)
+  progress     LearningProgress[]
+
+  @@index([pathId])
+  @@index([pathId, order])
+}
+
+model LearningProgress {
+  id          String   @id @default(cuid())
+  pathId      String
+  lessonId    String
+  userId      String
+  status      String   @default("not_started")
+  progress    Int      @default(0)
+  score       Int      @default(0)
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  path        LearningPath   @relation(fields: [pathId], references: [id], onDelete: Cascade)
+  lesson      LearningLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([userId, pathId])
+  @@index([lessonId])
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  nameAr      String?
+  description String
+  descriptionAr String?
+  icon        String
+  category    String   @default("learning")
+  tier        String   @default("bronze")
+  xpReward    Int      @default(0)
+  requirement Int      @default(1)
+  createdAt   DateTime @default(now())
+  userAchievements UserAchievement[]
+
+  @@index([category])
+  @@index([tier])
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+  progress      Int      @default(100)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+}
+
+model UserGoal {
+  id           String   @id @default(cuid())
+  userId       String
+  type         String   @default("daily")
+  category     String   @default("words")
+  target       Int      @default(10)
+  current      Int      @default(0)
+  startDate    DateTime @default(now())
+  endDate      DateTime?
+  isCompleted  Boolean  @default(false)
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, type])
+  @@index([userId, isCompleted])
+}
+
+model WeeklyReport {
+  id              String   @id @default(cuid())
+  userId          String
+  weekStart       DateTime
+  weekEnd         DateTime
+  wordsLearned    Int      @default(0)
+  wordsReviewed   Int      @default(0)
+  correctAnswers  Int      @default(0)
+  wrongAnswers    Int      @default(0)
+  streakDays      Int      @default(0)
+  xpEarned        Int      @default(0)
+  achievements    Int      @default(0)
+  topCategory     String?
+  weakestCategory String?
+  summary         String?
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart])
+  @@index([userId])
+  @@index([userId, weekStart])
+}
+
+model Notification {
+  id           String   @id @default(cuid())
+  userId       String
+  type         String   @default("general")
+  title        String
+  titleAr      String?
+  message      String
+  messageAr    String?
+  icon         String?
+  actionType   String?
+  actionId     String?
+  isRead       Boolean  @default(false)
+  isActioned   Boolean  @default(false)
+  priority     String   @default("normal")
+  scheduledFor DateTime?
+  sentAt       DateTime?
+  readAt       DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([userId, type])
+  @@index([scheduledFor])
+}
+
+model NotificationSetting {
+  id                    String   @id @default(cuid())
+  userId                String
+  reviewReminders       Boolean  @default(true)
+  dailyGoalReminders    Boolean  @default(true)
+  achievementAlerts     Boolean  @default(true)
+  streakWarnings        Boolean  @default(true)
+  friendActivity        Boolean  @default(true)
+  challengeInvites      Boolean  @default(true)
+  weeklyReports         Boolean  @default(true)
+  newFeatures           Boolean  @default(true)
+  quietHoursEnabled     Boolean  @default(false)
+  quietHoursStart       String   @default("22:00")
+  quietHoursEnd         String   @default("07:00")
+  soundEnabled          Boolean  @default(true)
+  vibrationEnabled      Boolean  @default(true)
+  morningReminderTime   String   @default("08:00")
+  eveningReminderTime   String   @default("20:00")
+  reviewReminderTime    String   @default("19:00")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+}
+
+model ReminderSchedule {
+  id           String   @id @default(cuid())
+  userId       String
+  type         String   @default("review")
+  title        String
+  titleAr      String?
+  message      String
+  messageAr    String?
+  cronExpr     String?
+  time         String?
+  daysOfWeek   String   @default("[]")
+  isActive     Boolean  @default(true)
+  lastSentAt   DateTime?
+  nextSendAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isActive])
+  @@index([nextSendAt])
+}
+
+model Friendship {
+  id           String   @id @default(cuid())
+  requesterId  String
+  addresseeId  String
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  requester    User     @relation("FriendRequests", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee    User     @relation("FriendAddresses", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([requesterId])
+  @@index([addresseeId])
+  @@index([status])
+}
+
+model Challenge {
+  id           String   @id @default(cuid())
+  title        String
+  titleAr      String?
+  description  String?
+  descriptionAr String?
+  type         String   @default("vocabulary")
+  difficulty   String   @default("medium")
+  creatorId    String
+  opponentId   String?
+  status       String   @default("open")
+  xpReward     Int      @default(50)
+  wordCount    Int      @default(10)
+  timeLimit    Int?
+  startDate    DateTime?
+  endDate      DateTime?
+  creatorScore Int      @default(0)
+  opponentScore Int     @default(0)
+  winnerId     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  creator      User     @relation("ChallengeCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  opponent     User?    @relation("ChallengeOpponent", fields: [opponentId], references: [id], onDelete: SetNull)
+  winner       User?    @relation("ChallengeWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  attempts     ChallengeAttempt[]
+
+  @@index([creatorId])
+  @@index([opponentId])
+  @@index([status])
+  @@index([type])
+}
+
+model ChallengeAttempt {
+  id           String   @id @default(cuid())
+  challengeId  String
+  userId       String
+  score        Int      @default(0)
+  correctCount Int      @default(0)
+  wrongCount   Int      @default(0)
+  timeSpent    Int      @default(0)
+  completedAt  DateTime @default(now())
+  challenge    Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+  @@index([challengeId])
+  @@index([userId])
+}
+
+model Leaderboard {
+  id           String   @id @default(cuid())
+  userId       String
+  period       String   @default("weekly")
+  category     String   @default("general")
+  score        Int      @default(0)
+  rank         Int      @default(0)
+  wordsLearned Int      @default(0)
+  xpEarned     Int      @default(0)
+  streakDays   Int      @default(0)
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, period, category])
+  @@index([userId])
+  @@index([period, category])
+  @@index([period, category, rank])
+}
+
+model CommunityList {
+  id           String   @id @default(cuid())
+  name         String
+  nameAr       String?
+  description  String?
+  descriptionAr String?
+  creatorId    String
+  isPublic     Boolean  @default(true)
+  isOfficial   Boolean  @default(false)
+  category     String?
+  tags         String   @default("[]")
+  wordCount    Int      @default(0)
+  downloads    Int      @default(0)
+  likes        Int      @default(0)
+  difficulty   String   @default("intermediate")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  creator      User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  words        CommunityListWord[]
+  comments     CommunityComment[]
+  ratings      CommunityRating[]
+
+  @@index([creatorId])
+  @@index([isPublic])
+  @@index([isOfficial])
+  @@index([category])
+}
+
+model CommunityListWord {
+  id           String   @id @default(cuid())
+  listId       String
+  word         String
+  translation  String
+  pronunciation String?
+  definition   String?
+  example      String?
+  order        Int      @default(0)
+  list         CommunityList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([listId])
+}
+
+model CommunityComment {
+  id           String   @id @default(cuid())
+  listId       String
+  userId       String
+  content      String
+  likes        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  list         CommunityList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([listId])
+  @@index([userId])
+}
+
+model CommunityRating {
+  id           String   @id @default(cuid())
+  listId       String
+  userId       String
+  rating       Int      @default(5)
+  createdAt    DateTime @default(now())
+  list         CommunityList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, userId])
+  @@index([listId])
+}
+
+model DailyAnalytics {
+  id                String   @id @default(cuid())
+  userId            String
+  date              DateTime
+  totalStudyTime    Int      @default(0)
+  wordsReviewed     Int      @default(0)
+  wordsLearned      Int      @default(0)
+  correctAnswers    Int      @default(0)
+  wrongAnswers      Int      @default(0)
+  accuracy          Float    @default(0)
+  streakMaintained  Boolean  @default(false)
+  xpEarned          Int      @default(0)
+  goalsCompleted    Int      @default(0)
+  challengesWon     Int      @default(0)
+  storiesRead       Int      @default(0)
+  notesCreated      Int      @default(0)
+  peakHour          Int?
+  averageSpeed      Float    @default(0)
+  retentionRate     Float    @default(0)
+  createdAt         DateTime @default(now())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([userId, date])
+}
+
+model CategoryStrength {
+  id              String   @id @default(cuid())
+  userId          String
+  categoryId      String
+  totalWords      Int      @default(0)
+  masteredWords   Int      @default(0)
+  learningWords   Int      @default(0)
+  averageAccuracy Float    @default(0)
+  lastPracticed   DateTime?
+  strengthScore   Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId])
+  @@index([userId])
+  @@index([userId, categoryId])
+}
+
+model LearningSession {
+  id              String   @id @default(cuid())
+  userId          String
+  sessionType     String   @default("review")
+  startedAt       DateTime @default(now())
+  endedAt         DateTime?
+  duration        Int      @default(0)
+  wordsStudied    Int      @default(0)
+  correctCount    Int      @default(0)
+  wrongCount      Int      @default(0)
+  xpEarned        Int      @default(0)
+  focusScore      Float    @default(0)
+  device          String?
+  source          String?
+  metadata        String   @default("{}")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, sessionType])
+  @@index([startedAt])
+}
+
+model StoreItem {
+  id              String   @id @default(cuid())
+  name            String
+  nameAr          String?
+  description     String
+  descriptionAr   String?
+  type            String   @default("avatar")
+  rarity          String   @default("common")
+  price           Int      @default(100)
+  currency        String   @default("coins")
+  icon            String?
+  imageData       String?
+  effects         String   @default("{}")
+  isLimited       Boolean  @default(false)
+  limitedQuantity Int?
+  availableFrom   DateTime?
+  availableUntil  DateTime?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  userItems       UserItem[]
+
+  @@index([type])
+  @@index([rarity])
+  @@index([isActive])
+}
+
+model UserItem {
+  id           String   @id @default(cuid())
+  userId       String
+  itemId       String
+  isEquipped   Boolean  @default(false)
+  purchasedAt  DateTime @default(now())
+  expiresAt    DateTime?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item         StoreItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+  @@index([userId])
+  @@index([userId, isEquipped])
+}
+
+model UserCurrency {
+  id           String   @id @default(cuid())
+  userId       String
+  coins        Int      @default(0)
+  gems         Int      @default(0)
+  totalEarned  Int      @default(0)
+  totalSpent   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+}
+
+model DailyReward {
+  id           String   @id @default(cuid())
+  userId       String
+  day          Int      @default(1)
+  claimedAt    DateTime @default(now())
+  coinsReward  Int      @default(10)
+  gemsReward   Int      @default(0)
+  xpReward     Int      @default(5)
+  itemId       String?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, day])
+  @@index([userId])
+}
+
+model CurrencyTransaction {
+  id           String   @id @default(cuid())
+  userId       String
+  type         String
+  currency     String
+  amount       Int
+  reason       String
+  relatedId    String?
+  balanceAfter Int
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, type])
+}
+
+model AdminVideo {
+  id          String   @id @default(cuid())
+  title       String
+  titleAr     String
+  description String?
+  descriptionAr String?
+  url         String
+  thumbnail   String?
+  category    String
+  type        String   @default("video")
+  ageGroup    String?
+  difficulty  String   @default("easy")
+  duration    Int      @default(0)
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([type])
+  @@index([isActive])
+}
+
+model AdminLesson {
+  id          String   @id @default(cuid())
+  title       String
+  titleAr     String
+  description String?
+  descriptionAr String?
+  content     String
+  contentAr   String?
+  category    String
+  level       String?
+  order       Int      @default(0)
+  duration    Int      @default(15)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([level])
+  @@index([isActive])
+}
+
+model AdminCategory {
+  id          String   @id @default(cuid())
+  name        String
+  nameAr      String
+  description String?
+  descriptionAr String?
+  icon        String?
+  color       String?
+  type        String   @default("general")
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([isActive])
+}
+
+model AdminUpdate {
+  id          String   @id @default(cuid())
+  title       String
+  titleAr     String
+  content     String
+  contentAr   String?
+  type        String   @default("update")
+  priority    String   @default("normal")
+  isPublished Boolean  @default(true)
+  publishedAt DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([isPublished])
+  @@index([publishedAt])
+}
+
+model AdminNote {
+  id        String   @id @default(cuid())
+  title     String
+  titleAr   String?
+  content   String
+  contentAr String?
+  category  String?
+  color     String   @default("#10B981")
+  isPinned  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([isPinned])
+}
+
+model KidsQuiz {
+  id           String   @id @default(cuid())
+  title        String
+  titleAr      String
+  description  String?
+  descriptionAr String?
+  category     String
+  type         String   @default("multiple_choice")
+  difficulty   String   @default("easy")
+  ageGroup     String?
+  xpReward     Int      @default(10)
+  timeLimit    Int?
+  questions    String
+  isActive     Boolean  @default(true)
+  order        Int      @default(0)
+  sourceVideoId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  attempts     KidsQuizAttempt[]
+
+  @@index([category])
+  @@index([type])
+  @@index([isActive])
+  @@index([sourceVideoId])
+}
+
+model KidsQuizAttempt {
+  id           String   @id @default(cuid())
+  quizId       String
+  userId       String?
+  score        Int      @default(0)
+  totalPoints  Int      @default(0)
+  correctCount Int      @default(0)
+  wrongCount   Int      @default(0)
+  timeSpent    Int      @default(0)
+  completedAt  DateTime @default(now())
+  answers      String   @default("[]")
+  quiz         KidsQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
+  @@index([userId])
+  @@index([completedAt])
+}
+
+model KidsGame {
+  id           String   @id @default(cuid())
+  title        String
+  titleAr      String
+  description  String?
+  descriptionAr String?
+  category     String
+  type         String   @default("memory")
+  difficulty   String   @default("easy")
+  ageGroup     String?
+  xpReward     Int      @default(15)
+  config       String   @default("{}")
+  thumbnail    String?
+  isActive     Boolean  @default(true)
+  order        Int      @default(0)
+  sourceVideoId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  scores       KidsGameScore[]
+
+  @@index([category])
+  @@index([type])
+  @@index([isActive])
+  @@index([sourceVideoId])
+}
+
+model KidsGameScore {
+  id          String   @id @default(cuid())
+  gameId      String
+  userId      String?
+  score       Int      @default(0)
+  level       Int      @default(1)
+  timeSpent   Int      @default(0)
+  playedAt    DateTime @default(now())
+  game        KidsGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([gameId])
+  @@index([userId])
+  @@index([playedAt])
+}
+
+model KidsDailyChallenge {
+  id           String   @id @default(cuid())
+  title        String
+  titleAr      String
+  description  String?
+  descriptionAr String?
+  type         String   @default("quiz")
+  targetCount  Int      @default(1)
+  xpReward     Int      @default(20)
+  coinsReward  Int      @default(10)
+  icon         String?
+  color        String   @default("#F59E0B")
+  validFrom    DateTime @default(now())
+  validUntil   DateTime?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  progress     KidsDailyChallengeProgress[]
+
+  @@index([type])
+  @@index([isActive])
+  @@index([validFrom])
+}
+
+model KidsDailyChallengeProgress {
+  id          String   @id @default(cuid())
+  challengeId String
+  userId      String?
+  currentCount Int     @default(0)
+  isCompleted Boolean  @default(false)
+  completedAt DateTime?
+  claimedAt   DateTime?
+  challenge   KidsDailyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+  @@index([challengeId])
+  @@index([userId])
+}
+
+model KidsFlashcard {
+  id           String   @id @default(cuid())
+  word         String
+  wordAr       String
+  translation  String
+  translationAr String?
+  imageUrl     String?
+  audioUrl     String?
+  category     String
+  ageGroup     String?
+  example      String?
+  exampleAr    String?
+  order        Int      @default(0)
+  isActive     Boolean  @default(true)
+  sourceVideoId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+  @@index([sourceVideoId])
+}
+
+model KidsExercise {
+  id           String   @id @default(cuid())
+  title        String
+  titleAr      String
+  instruction  String
+  instructionAr String?
+  type         String   @default("translation")
+  category     String
+  difficulty   String   @default("easy")
+  ageGroup     String?
+  content      String   @default("{}")
+  xpReward     Int      @default(5)
+  isActive     Boolean  @default(true)
+  order        Int      @default(0)
+  sourceVideoId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  attempts     KidsExerciseAttempt[]
+
+  @@index([category])
+  @@index([type])
+  @@index([isActive])
+  @@index([sourceVideoId])
+}
+
+model KidsExerciseAttempt {
+  id           String   @id @default(cuid())
+  exerciseId   String
+  userId       String?
+  score        Int      @default(0)
+  answers      String   @default("[]")
+  completedAt  DateTime @default(now())
+  exercise     KidsExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([exerciseId])
+  @@index([userId])
+  @@index([completedAt])
+}
+
+model KidsCertificate {
+  id           String   @id @default(cuid())
+  title        String
+  titleAr      String
+  description  String?
+  descriptionAr String?
+  type         String   @default("completion")
+  category     String?
+  requirement  String   @default("{}")
+  templateData String   @default("{}")
+  xpReward     Int      @default(50)
+  icon         String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  userCertificates KidsUserCertificate[]
+
+  @@index([type])
+  @@index([isActive])
+}
+
+model KidsUserCertificate {
+  id             String   @id @default(cuid())
+  certificateId  String
+  userId         String?
+  childName      String
+  issuedAt       DateTime @default(now())
+  certificate    KidsCertificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+
+  @@index([certificateId])
+  @@index([userId])
+}
+
+model KidsProgress {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  
+  xp                Int      @default(0)
+  level             Int      @default(1)
+  
+  currentStreak     Int      @default(0)
+  longestStreak     Int      @default(0)
+  lastActiveDate    DateTime?
+  
+  coins             Int      @default(0)
+  gems              Int      @default(0)
+  
+  totalVideosWatched   Int   @default(0)
+  totalQuizzesCompleted Int  @default(0)
+  totalGamesPlayed     Int   @default(0)
+  totalLessonsRead     Int   @default(0)
+  totalFlashcardsViewed Int  @default(0)
+  
+  totalCorrectAnswers  Int   @default(0)
+  totalWrongAnswers    Int   @default(0)
+  
+  totalTimeSpent       Int   @default(0)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([level])
+}
+
+model GeminiConfig {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  apiKey    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
