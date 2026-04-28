@@ -51,9 +51,10 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
   const [superlative, setSuperlative] = useState('')
   const [adverb, setAdverb] = useState('')
   
-  // معلومات إضافية
+  // معلومات إضافية - 3 أمثلة
   const [example1, setExample1] = useState('')
   const [example2, setExample2] = useState('')
+  const [example3, setExample3] = useState('')
   const [synonyms, setSynonyms] = useState('')
   const [antonyms, setAntonyms] = useState('')
   const [arabicMeaning, setArabicMeaning] = useState('')
@@ -83,6 +84,7 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
     setAdverb('')
     setExample1('')
     setExample2('')
+    setExample3('')
     setSynonyms('')
     setAntonyms('')
     setArabicMeaning('')
@@ -126,13 +128,13 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
       if (data.partOfSpeech) setPartOfSpeech(data.partOfSpeech)
       if (data.level) setLevel(data.level)
       
-      // ✅ تصحيح: تعيين definition لـ englishDefinition
+      // التعريف بالإنجليزي
       if (data.definition) setEnglishDefinition(data.definition)
       
-      // ✅ إضافة: تعيين usageNotes لـ context
+      // سياق الاستخدام
       if (data.usageNotes) setContext(data.usageNotes)
       
-      // ✅ تعيين arabicMeaning من API
+      // المعنى الإضافي بالعربي
       if (data.arabicMeaning) setArabicMeaning(data.arabicMeaning)
       
       // تراكيب الفعل
@@ -157,10 +159,15 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
         if (data.adjectiveForms.adverb) setAdverb(data.adjectiveForms.adverb)
       }
       
-      // أمثلة
-      if (data.examples && data.examples.length > 0) {
+      // أمثلة - 3 أمثلة مع الترجمة
+      if (data.sentences && data.sentences.length > 0) {
+        setExample1(data.sentences[0]?.sentence || '')
+        setExample2(data.sentences[1]?.sentence || '')
+        setExample3(data.sentences[2]?.sentence || '')
+      } else if (data.examples && data.examples.length > 0) {
         setExample1(data.examples[0] || '')
         setExample2(data.examples[1] || '')
+        setExample3(data.examples[2] || '')
       }
       
       // مرادفات وأضداد
@@ -189,6 +196,7 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
     const examples: string[] = []
     if (example1.trim()) examples.push(example1.trim())
     if (example2.trim()) examples.push(example2.trim())
+    if (example3.trim()) examples.push(example3.trim())
 
     addWord({
       word: word.trim(),
@@ -353,7 +361,7 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
                 </Select>
               </div>
               
-              {/* ✅ التعريف بالإنجليزي داخل Card */}
+              {/* التعريف بالإنجليزي */}
               <div className="space-y-2">
                 <Label>التعريف بالإنجليزي</Label>
                 <Textarea
@@ -523,7 +531,7 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* الأمثلة */}
+                {/* الأمثلة - 3 أمثلة */}
                 <div className="space-y-3">
                   <Label className="flex items-center gap-2">
                     <Lightbulb className="w-4 h-4 text-amber-500" />
@@ -538,6 +546,11 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
                     value={example2}
                     onChange={(e) => setExample2(e.target.value)}
                     placeholder="مثال 2: What a beautiful day!"
+                  />
+                  <Input
+                    value={example3}
+                    onChange={(e) => setExample3(e.target.value)}
+                    placeholder="مثال 3: The weather is beautiful today!"
                   />
                 </div>
 
@@ -565,7 +578,7 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
 
                 <Separator />
 
-                {/* معنى إضافي */}
+                {/* معنى إضافي بالعربي */}
                 <div className="space-y-2">
                   <Label>معنى إضافي بالعربي</Label>
                   <Textarea
@@ -576,6 +589,7 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
                   />
                 </div>
 
+                {/* سياق الاستخدام */}
                 <div className="space-y-2">
                   <Label>سياق الاستخدام</Label>
                   <Textarea
