@@ -30,11 +30,13 @@ export async function GET(request: NextRequest) {
       ];
     }
     
-    if (category) {
+    // ✅ إصلاح: تجاهل "all" كقيمة للفلتر
+    if (category && category !== 'all') {
       where.categoryId = category;
     }
     
-    if (level) {
+    // ✅ إصلاح: تجاهل "all" كقيمة للفلتر
+    if (level && level !== 'all') {
       where.level = level;
     }
     
