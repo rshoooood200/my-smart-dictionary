@@ -49,8 +49,9 @@ Return JSON:
   "synonyms": ["syn1", "syn2", "syn3", "syn4", "syn5"],
   "antonyms": ["ant1", "ant2", "ant3"],
   "examples": [
-    {"en": "Sentence with word", "ar": "الترجمة"},
-    {"en": "Sentence 2", "ar": "الترجمة"}
+    {"en": "Everyday context sentence using the word", "ar": "الترجمة العربية"},
+    {"en": "Formal/academic context sentence", "ar": "الترجمة العربية"},
+    {"en": "Common phrase or informal context", "ar": "الترجمة العربية"}
   ],
   "usageNotes": "Brief usage note",
   "verbForms": {
@@ -74,6 +75,9 @@ Return JSON:
 }
 
 IMPORTANT: 
+- Always provide exactly 3 example sentences in "examples" array, each with both "en" and "ar" fields
+- The Arabic translations must be accurate and natural
+- Use different contexts for each sentence (everyday, formal, informal)
 - Only include verbForms if partOfSpeech is "verb"
 - Only include nounForms if partOfSpeech is "noun"
 - Only include adjectiveForms if partOfSpeech is "adjective"
@@ -133,10 +137,10 @@ JSON:`;
       synonyms: Array.isArray(wordData.synonyms) ? wordData.synonyms.slice(0, 8) : [],
       antonyms: Array.isArray(wordData.antonyms) ? wordData.antonyms.slice(0, 5) : [],
       examples: Array.isArray(wordData.examples)
-        ? wordData.examples.slice(0, 5).map(s => s.en || '')
+        ? wordData.examples.slice(0, 3).map(s => s.en || '')
         : [],
       sentences: Array.isArray(wordData.examples)
-        ? wordData.examples.slice(0, 5).map(s => ({
+        ? wordData.examples.slice(0, 3).map(s => ({
             sentence: s.en || '',
             translation: s.ar || '',
           }))

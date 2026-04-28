@@ -532,6 +532,81 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
             </Card>
           )}
 
+          {/* ✅ 3 جمل مع الترجمة العربية - ظاهرة دائماً بشكل افتراضي */}
+          <Card className="border-emerald-200 bg-emerald-50/30 dark:bg-emerald-900/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Languages className="w-4 h-4 text-emerald-600" />
+                أمثلة على استخدام الكلمة
+                <Badge variant="secondary" className="text-xs mr-auto">
+                  <Sparkles className="w-3 h-3 ml-1" />
+                  AI
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* مثال 1 */}
+              <div className="space-y-2 p-3 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant="secondary" className="text-xs">1</Badge>
+                  <span className="text-xs text-gray-500">المثال الأول</span>
+                </div>
+                <Input
+                  value={sentence1.en}
+                  onChange={(e) => setSentence1(prev => ({ ...prev, en: e.target.value }))}
+                  placeholder="مثال 1 بالإنجليزية: She is a beautiful girl."
+                  className="mb-2"
+                />
+                <Input
+                  value={sentence1.ar}
+                  onChange={(e) => setSentence1(prev => ({ ...prev, ar: e.target.value }))}
+                  placeholder="ترجمة المثال 1 بالعربي: هي فتاة جميلة."
+                  className="border-emerald-200 dark:border-emerald-800"
+                />
+              </div>
+              
+              {/* مثال 2 */}
+              <div className="space-y-2 p-3 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant="secondary" className="text-xs">2</Badge>
+                  <span className="text-xs text-gray-500">المثال الثاني</span>
+                </div>
+                <Input
+                  value={sentence2.en}
+                  onChange={(e) => setSentence2(prev => ({ ...prev, en: e.target.value }))}
+                  placeholder="مثال 2 بالإنجليزية: What a beautiful day!"
+                  className="mb-2"
+                />
+                <Input
+                  value={sentence2.ar}
+                  onChange={(e) => setSentence2(prev => ({ ...prev, ar: e.target.value }))}
+                  placeholder="ترجمة المثال 2 بالعربي: يا له من يوم جميل!"
+                  className="border-emerald-200 dark:border-emerald-800"
+                />
+              </div>
+              
+              {/* مثال 3 */}
+              <div className="space-y-2 p-3 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant="secondary" className="text-xs">3</Badge>
+                  <span className="text-xs text-gray-500">المثال الثالث</span>
+                </div>
+                <Input
+                  value={sentence3.en}
+                  onChange={(e) => setSentence3(prev => ({ ...prev, en: e.target.value }))}
+                  placeholder="مثال 3 بالإنجليزية: The weather is beautiful today!"
+                  className="mb-2"
+                />
+                <Input
+                  value={sentence3.ar}
+                  onChange={(e) => setSentence3(prev => ({ ...prev, ar: e.target.value }))}
+                  placeholder="ترجمة المثال 3 بالعربي: الطقس جميل اليوم!"
+                  className="border-emerald-200 dark:border-emerald-800"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* زر إظهار/إخفاء التفاصيل المتقدمة */}
           <Button
             variant="ghost"
@@ -546,7 +621,7 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
             ) : (
               <>
                 <ChevronDown className="w-4 h-4 ml-2" />
-                إظهار التفاصيل المتقدمة
+                إظهار التفاصيل المتقدمة (مرادفات، أضداد، معنى إضافي...)
               </>
             )}
           </Button>
@@ -561,76 +636,6 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* ✅ إصلاح: 3 جمل مع الترجمة العربية */}
-                <div className="space-y-4">
-                  <Label className="flex items-center gap-2">
-                    <Languages className="w-4 h-4 text-emerald-500" />
-                    أمثلة مع الترجمة العربية
-                  </Label>
-                  
-                  {/* مثال 1 */}
-                  <div className="space-y-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="secondary" className="text-xs">1</Badge>
-                      <span className="text-xs text-gray-500">المثال الأول</span>
-                    </div>
-                    <Input
-                      value={sentence1.en}
-                      onChange={(e) => setSentence1(prev => ({ ...prev, en: e.target.value }))}
-                      placeholder="مثال 1 بالإنجليزية: She is a beautiful girl."
-                      className="mb-2"
-                    />
-                    <Input
-                      value={sentence1.ar}
-                      onChange={(e) => setSentence1(prev => ({ ...prev, ar: e.target.value }))}
-                      placeholder="ترجمة المثال 1 بالعربي: هي فتاة جميلة."
-                      className="border-emerald-200 dark:border-emerald-800"
-                    />
-                  </div>
-                  
-                  {/* مثال 2 */}
-                  <div className="space-y-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="secondary" className="text-xs">2</Badge>
-                      <span className="text-xs text-gray-500">المثال الثاني</span>
-                    </div>
-                    <Input
-                      value={sentence2.en}
-                      onChange={(e) => setSentence2(prev => ({ ...prev, en: e.target.value }))}
-                      placeholder="مثال 2 بالإنجليزية: What a beautiful day!"
-                      className="mb-2"
-                    />
-                    <Input
-                      value={sentence2.ar}
-                      onChange={(e) => setSentence2(prev => ({ ...prev, ar: e.target.value }))}
-                      placeholder="ترجمة المثال 2 بالعربي: يا له من يوم جميل!"
-                      className="border-emerald-200 dark:border-emerald-800"
-                    />
-                  </div>
-                  
-                  {/* مثال 3 */}
-                  <div className="space-y-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="secondary" className="text-xs">3</Badge>
-                      <span className="text-xs text-gray-500">المثال الثالث</span>
-                    </div>
-                    <Input
-                      value={sentence3.en}
-                      onChange={(e) => setSentence3(prev => ({ ...prev, en: e.target.value }))}
-                      placeholder="مثال 3 بالإنجليزية: The weather is beautiful today!"
-                      className="mb-2"
-                    />
-                    <Input
-                      value={sentence3.ar}
-                      onChange={(e) => setSentence3(prev => ({ ...prev, ar: e.target.value }))}
-                      placeholder="ترجمة المثال 3 بالعربي: الطقس جميل اليوم!"
-                      className="border-emerald-200 dark:border-emerald-800"
-                    />
-                  </div>
-                </div>
-
-                <Separator />
-
                 {/* المرادفات والأضداد */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
