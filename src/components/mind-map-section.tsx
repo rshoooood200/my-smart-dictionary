@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Loader2, Sparkles, Zap, Save, Trash2, History, Network, Maximize, Minimize } from 'lucide-react'
+import { Search, Loader2, Sparkles, Zap, Save, Trash2, History, Network, Maximize, Minimize, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useVocabStore } from '@/store/vocab-store'
@@ -48,11 +49,8 @@ export function MindMapSection() {
     }
   }, [])
 
-  // السماح بالخروج من Fullscreen عبر زر Escape
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsFullscreen(false)
-    }
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsFullscreen(false) }
     window.addEventListener('keydown', handleEsc)
     return () => window.removeEventListener('keydown', handleEsc)
   }, [])
@@ -71,14 +69,11 @@ export function MindMapSection() {
       const data = await res.json()
 
       if (data.success && data.data) {
-        // فحص إذا كانت الكلمة خاطئة إملائياً
-        if (data.data.is_correct === false) {
-          const suggestions = data.data.suggestions?.join(', ') || 'No suggestions'
-          toast.error(`Word might be misspelled! Did you mean: ${suggestions}?`, { duration: 6000 })
-          setIsLoading(false)
-          return
-        }
         setMapData(data.data)
+        // إظهار تنبيه إذا تم تصحيح الكلمة
+        if (data.data.is_correct === false) {
+          toast.warning(`Spelling corrected! Generating map for "${data.data.center_word}"`, { duration: 6000 })
+        }
       } else {
         toast.error(data.error || 'Failed to generate mind map')
       }
@@ -127,6 +122,21 @@ export function MindMapSection() {
       <AnimatePresence>
         {mapData && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-4">
+            
+            {/* تنبيه التصحيح الإملائي - يظهر فقط إذا كانت الكلمة خاطئة */}
+            {mapData.is_correct === false && (
+              <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Spelling Notice</AlertTitle>
+                <AlertDescription>
+                  Did you mean <strong className="capitalize">{mapData.center_word}</strong>? 
+                  {mapData.suggestions?.length > 0 && ` Other suggestions: ${mapData.suggestions.join(', ')}`}
+                  <br />
+                  <span className="text-xs">The mind map below is generated for the corrected word.</span>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="flex items-center justify-between bg-gradient-to-r from-violet-600 to-purple-700 p-4 rounded-xl text-white">
               <h2 className="text-xl font-bold capitalize">{mapData.center_word}</h2>
               <div className="flex gap-2">
@@ -143,20 +153,14 @@ export function MindMapSection() {
               isFullscreen ? "fixed inset-0 z-50 rounded-none" : "h-[600px] md:h-[700px]"
             )}>
               
-              {/* زر الخروج من Fullscreen العائم */}
               {isFullscreen && (
-                <Button 
-                  onClick={() => setIsFullscreen(false)} 
-                  className="absolute bottom-6 right-6 z-[60] bg-rose-500 hover:bg-rose-600 text-white rounded-full w-14 h-14 shadow-2xl flex items-center justify-center"
-                >
+                <Button onClick={() => setIsFullscreen(false)} className="absolute bottom-6 right-6 z-[60] bg-rose-500 hover:bg-rose-600 text-white rounded-full w-14 h-14 shadow-2xl">
                   <Minimize className="w-6 h-6" />
                 </Button>
               )}
 
               <div ref={canvasRef} className="w-full h-full overflow-auto cursor-grab active:cursor-grabbing">
                 <div className="relative w-[800px] h-[800px] mx-auto" style={{ minHeight: '100%', minWidth: '100%' }}>
-                  
-                  {/* SVG Lines */}
                   <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
                     {mapData.branches.map((branch, index) => {
                       const angle = (2 * Math.PI * index) / mapData.branches.length - Math.PI / 2
@@ -169,14 +173,12 @@ export function MindMapSection() {
                     })}
                   </svg>
 
-                  {/* Center Circle */}
                   <motion.div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 15 }}>
                     <div className="w-36 h-36 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-2xl border-4 border-white dark:border-gray-800">
                       <span className="text-white font-bold text-2xl text-center px-2 capitalize">{mapData.center_word}</span>
                     </div>
                   </motion.div>
 
-                  {/* Branch Circles */}
                   {mapData.branches.map((branch, index) => {
                     const angle = (2 * Math.PI * index) / mapData.branches.length - Math.PI / 2
                     const r = 30
