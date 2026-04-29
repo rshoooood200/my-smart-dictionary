@@ -29,14 +29,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Enhanced prompt with word forms
-    const prompt = `Analyze: "${wordText}"
+    // Enhanced prompt with STRICT instructions for 3 sentences
+    const prompt = `Analyze the English word: "${wordText}"
 
 FIRST: Check if "${wordText}" is spelled correctly.
 - If MISSPELLED: set "isCorrect": false, provide "correctWord" and "suggestions"
 - If CORRECT: set "isCorrect": true, provide full analysis
 
-Return JSON:
+Return a VALID JSON object with this EXACT structure:
 {
   "isCorrect": true/false,
   "correctWord": "correct spelling if misspelled",
@@ -46,11 +46,12 @@ Return JSON:
   "definition": "English definition",
   "partOfSpeech": "noun|verb|adjective|adverb|preposition|conjunction|pronoun|interjection",
   "level": "beginner|intermediate|advanced",
-  "synonyms": ["syn1", "syn2", "syn3", "syn4", "syn5"],
-  "antonyms": ["ant1", "ant2", "ant3"],
+  "synonyms": ["syn1", "syn2", "syn3"],
+  "antonyms": ["ant1", "ant2"],
   "examples": [
-    {"en": "Sentence with word", "ar": "الترجمة"},
-    {"en": "Sentence 2", "ar": "الترجمة"}
+    {"en": "English sentence 1 using the word ${wordText}", "ar": "الترجمة العربية للجملة الأولى"},
+    {"en": "English sentence 2 using the word ${wordText}", "ar": "الترجمة العربية للجملة الثانية"},
+    {"en": "English sentence 3 using the word ${wordText}", "ar": "الترجمة العربية للجملة الثالثة"}
   ],
   "usageNotes": "Brief usage note",
   "verbForms": {
@@ -73,11 +74,13 @@ Return JSON:
   "arabicMeaning": "شرح مفصل بالعربي"
 }
 
-IMPORTANT: 
-- Only include verbForms if partOfSpeech is "verb"
-- Only include nounForms if partOfSpeech is "noun"
-- Only include adjectiveForms if partOfSpeech is "adjective"
-- All forms should be empty strings "" if not applicable
+CRITICAL RULES:
+1. You MUST generate EXACTLY 3 examples. Not 2, not 4. Exactly 3.
+2. Every example MUST have both "en" (English) and "ar" (Arabic translation).
+3. Only include verbForms if partOfSpeech is "verb"
+4. Only include nounForms if partOfSpeech is "noun"
+5. Only include adjectiveForms if partOfSpeech is "adjective"
+6. Return ONLY the JSON object, no other text.
 
 Word: "${wordText}"
 JSON:`;
@@ -95,23 +98,9 @@ JSON:`;
       antonyms: string[];
       examples: { en: string; ar: string }[];
       usageNotes: string;
-      verbForms?: {
-        past?: string;
-        pastParticiple?: string;
-        present?: string;
-        gerund?: string;
-        thirdPerson?: string;
-      };
-      nounForms?: {
-        singular?: string;
-        plural?: string;
-        countable?: boolean;
-      };
-      adjectiveForms?: {
-        comparative?: string;
-        superlative?: string;
-        adverb?: string;
-      };
+      verbForms?: any;
+      nounForms?: any;
+      adjectiveForms?: any;
       arabicMeaning?: string;
     }>(prompt, undefined, userApiKey);
 
@@ -120,6 +109,18 @@ JSON:`;
     const isCorrect = wordData.isCorrect !== false;
     const correctWord = isCorrect ? wordText : (wordData.correctWord || wordText);
     
+    // عملية تنظيف وتجهيز الجمل لتكون متوافقة 100% مع الواجهة
+    let validSentences: { sentence: string; translation: string }[] = [];
+    if (Array.isArray(wordData.examples) && wordData.examples.length > 0) {
+      validSentences = wordData.examples
+        .filter(s => s.en && s.ar) // التأكد من وجود الجملة والترجمة
+        .slice(0, 3) // أخذ 3 جمل فقط
+        .map(s => ({
+          sentence: s.en.trim(),
+          translation: s.ar.trim(),
+        }));
+    }
+
     const validatedData = {
       isCorrect,
       originalWord: wordText,
@@ -132,22 +133,12 @@ JSON:`;
       level: ['beginner', 'intermediate', 'advanced'].includes(wordData.level) ? wordData.level : 'beginner',
       synonyms: Array.isArray(wordData.synonyms) ? wordData.synonyms.slice(0, 8) : [],
       antonyms: Array.isArray(wordData.antonyms) ? wordData.antonyms.slice(0, 3) : [],
-      examples: Array.isArray(wordData.examples)
-        ? wordData.examples.slice(0, 3).map(s => s.en || '')
-        : [],
-      sentences: Array.isArray(wordData.examples)
-        ? wordData.examples.slice(0, 3).map(s => ({
-            sentence: s.en || '',
-            translation: s.ar || '',
-          }))
-        : [],
+      // دمج examples و sentences في مصفوفة واحدة نظيفة للواجهة
+      sentences: validSentences, 
       usageNotes: wordData.usageNotes || '',
       arabicMeaning: wordData.arabicMeaning || '',
-      // تراكيب الفعل
       verbForms: wordData.verbForms || {},
-      // تراكيب الاسم
       nounForms: wordData.nounForms || {},
-      // تراكيب الصفة
       adjectiveForms: wordData.adjectiveForms || {},
     };
 
