@@ -17,30 +17,24 @@ export async function POST(request: NextRequest) {
     if (userId) {
       try {
         const config = await db.geminiConfig.findUnique({ where: { userId } });
-        if (config?.apiKey) {
-          userApiKey = config.apiKey;
-        }
+        if (config?.apiKey) userApiKey = config.apiKey;
       } catch (dbError) {
         console.log('[Mind-Map] Could not fetch user API key');
       }
     }
 
+    // تعديل: إجبار الـ AI بتوليد الخريطة حتى لو كانت الكلمة خاطئة
     const prompt = `You are a professional English dictionary AI.
-First, check if the word "${wordText}" is spelled correctly in English.
+Analyze the word: "${wordText}"
 
-If it is MISSPELLED, return ONLY this JSON structure:
-{
-  "is_correct": false,
-  "suggestions": ["suggestion1", "suggestion2", "suggestion3"],
-  "center_word": "${wordText}",
-  "branches": []
-}
+1. If "${wordText}" is MISSPELLED, figure out the correct spelling. Put the correct spelling in "center_word", set "is_correct" to false, and provide "suggestions". STILL GENERATE the mind map branches for the CORRECTED word.
+2. If "${wordText}" is spelled CORRECTLY, set "is_correct" to true, leave suggestions empty, and generate the mind map.
 
-If it is CORRECT, generate a mind map and return ONLY this JSON structure:
+Return ONLY a valid JSON object. No markdown, no extra text.
 {
-  "is_correct": true,
-  "suggestions": [],
-  "center_word": "${wordText}",
+  "is_correct": boolean,
+  "suggestions": string[],
+  "center_word": string,
   "branches": [
     {
       "category_name": "Synonyms",
@@ -66,34 +60,25 @@ If it is CORRECT, generate a mind map and return ONLY this JSON structure:
 }
 
 STRICT RULES:
-1. Return ONLY valid JSON. No markdown, no extra text.
-2. All text must be in English only. No Arabic.
-3. If correct, provide 4 to 6 branches with 2 to 4 words each.
-4. Double check the spelling before generating branches.
+1. "branches" array MUST always contain 4 to 6 objects, even if the input was misspelled (generate them for the corrected word).
+2. Return ONLY valid JSON.
+3. All text must be in English only. No Arabic.
 
 Word: "${wordText}"`;
 
     const mapData = await callGeminiJSON<any>(prompt, undefined, userApiKey);
 
-    if (!mapData) {
-      return NextResponse.json({ success: false, error: 'Failed to generate mind map from AI' }, { status: 500 });
+    if (!mapData || !mapData.branches || mapData.branches.length === 0) {
+      return NextResponse.json({ success: false, error: 'Failed to generate mind map. AI returned empty data.' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, data: mapData });
 
   } catch (error: any) {
     console.error('Error generating mind map:', error);
-    
     if (error.message?.includes('API_KEY') || error.message?.includes('not configured')) {
-      return NextResponse.json(
-        { success: false, error: 'AI feature is not enabled. Please add an API key in settings.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'AI feature is not enabled.' }, { status: 400 });
     }
-    
-    return NextResponse.json(
-      { success: false, error: 'Failed to generate mind map' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Failed to generate mind map' }, { status: 500 });
   }
 }
