@@ -25,12 +25,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Prompt مخصص للإنجليزية فقط بدون أي عربي
     const prompt = `You are a professional English dictionary AI.
-Generate a mind map for the English word: "${wordText}".
+First, check if the word "${wordText}" is spelled correctly in English.
 
-Return ONLY a valid JSON object. No markdown, no extra text.
+If it is MISSPELLED, return ONLY this JSON structure:
 {
+  "is_correct": false,
+  "suggestions": ["suggestion1", "suggestion2", "suggestion3"],
+  "center_word": "${wordText}",
+  "branches": []
+}
+
+If it is CORRECT, generate a mind map and return ONLY this JSON structure:
+{
+  "is_correct": true,
+  "suggestions": [],
   "center_word": "${wordText}",
   "branches": [
     {
@@ -57,18 +66,16 @@ Return ONLY a valid JSON object. No markdown, no extra text.
 }
 
 STRICT RULES:
-1. Provide 4 to 6 branches maximum.
-2. Each branch must have 2 to 4 related English words.
-3. The "words" arrays MUST contain English words only.
-4. The "category_name" MUST be in English only.
-5. DO NOT include any Arabic text.
-6. Output ONLY raw valid JSON.
+1. Return ONLY valid JSON. No markdown, no extra text.
+2. All text must be in English only. No Arabic.
+3. If correct, provide 4 to 6 branches with 2 to 4 words each.
+4. Double check the spelling before generating branches.
 
 Word: "${wordText}"`;
 
     const mapData = await callGeminiJSON<any>(prompt, undefined, userApiKey);
 
-    if (!mapData || !mapData.branches) {
+    if (!mapData) {
       return NextResponse.json({ success: false, error: 'Failed to generate mind map from AI' }, { status: 500 });
     }
 
