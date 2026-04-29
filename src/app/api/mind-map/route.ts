@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const prompt = `You are a professional English-Arabic dictionary AI.
+    // Prompt مخصص للإنجليزية فقط بدون أي عربي
+    const prompt = `You are a professional English dictionary AI.
 Generate a mind map for the English word: "${wordText}".
 
 Return ONLY a valid JSON object. No markdown, no extra text.
@@ -34,27 +35,22 @@ Return ONLY a valid JSON object. No markdown, no extra text.
   "branches": [
     {
       "category_name": "Synonyms",
-      "arabic_category": "المرادفات",
       "words": ["syn1", "syn2", "syn3"]
     },
     {
       "category_name": "Antonyms",
-      "arabic_category": "الأضداد",
       "words": ["ant1", "ant2"]
     },
     {
       "category_name": "Related Verbs",
-      "arabic_category": "أفعال مرتبطة",
       "words": ["verb1", "verb2"]
     },
     {
       "category_name": "Contexts",
-      "arabic_category": "سياقات الاستخدام",
       "words": ["context1", "context2"]
     },
     {
       "category_name": "Derived Forms",
-      "arabic_category": "مشتقات الكلمة",
       "words": ["form1", "form2"]
     }
   ]
@@ -62,9 +58,11 @@ Return ONLY a valid JSON object. No markdown, no extra text.
 
 STRICT RULES:
 1. Provide 4 to 6 branches maximum.
-2. Each branch must have 2 to 4 related words.
-3. The "words" arrays must contain English words only.
-4. Output ONLY raw valid JSON.
+2. Each branch must have 2 to 4 related English words.
+3. The "words" arrays MUST contain English words only.
+4. The "category_name" MUST be in English only.
+5. DO NOT include any Arabic text.
+6. Output ONLY raw valid JSON.
 
 Word: "${wordText}"`;
 
@@ -81,13 +79,13 @@ Word: "${wordText}"`;
     
     if (error.message?.includes('API_KEY') || error.message?.includes('not configured')) {
       return NextResponse.json(
-        { success: false, error: 'ميزة الذكاء الاصطناعي غير مفعّلة. يرجى إضافة مفتاح API في الإعدادات.' },
+        { success: false, error: 'AI feature is not enabled. Please add an API key in settings.' },
         { status: 400 }
       );
     }
     
     return NextResponse.json(
-      { success: false, error: 'فشل في توليد الخريطة الذهنية' },
+      { success: false, error: 'Failed to generate mind map' },
       { status: 500 }
     );
   }
