@@ -207,13 +207,6 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
     if (showOnlyLearned && !word.isLearned) return false
     return true
   }), [words, searchQuery, selectedCategory, selectedLevel, showOnlyFavorites, showOnlyLearned])
-    }
-    if (selectedCategory && word.categoryId !== selectedCategory) return false
-    if (selectedLevel && word.level !== selectedLevel) return false
-    if (showOnlyFavorites && !word.isFavorite) return false
-    if (showOnlyLearned && !word.isLearned) return false
-    return true
-  }), [words, searchQuery, selectedCategory, selectedLevel, showOnlyFavorites, showOnlyLearned])
 
   const speak = useCallback((text: string) => {
     if (!speechSupported) return
@@ -1208,7 +1201,6 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
               <motion.div key="voice" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <VoiceFeatures words={words} onProgress={(result) => { if (result.passed) toast.success(`أحسنت! دقة ${result.accuracy}%`) }} />
              </motion.div>
-      
             )}
             {activeNav === 'ai' && (
               <motion.div key="ai" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
@@ -1219,22 +1211,16 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
               <motion.div key="analytics" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <AdvancedAnalytics currentUserId={currentUserId || ''} words={words} categories={categories} />
               </motion.div>
-            
-            
             )}
             {activeNav === 'data' && (
               <motion.div key="data" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <ImportExport />
               </motion.div>
-            
-           
             )}
             {activeNav === 'rewards' && (
               <motion.div key="rewards" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <RewardsStore />
               </motion.div>
-            
-           
             )}
             {activeNav === 'achievements' && (
               <motion.div key="achievements" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
@@ -1256,7 +1242,7 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
       </main>
 
       {/* Dialogs */}
-            <AddWordDialog 
+      <AddWordDialog 
         open={isAddDialogOpen} 
         onOpenChange={setIsAddDialogOpen} 
         categories={categories} 
