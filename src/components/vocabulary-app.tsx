@@ -79,7 +79,8 @@ const navItems: NavItem[] = [
     label: 'القاموس الذكي', 
     icon: BookOpen,
     children: [
-      { id: 'words', label: 'الكلمات', icon: Library },
+      { id: 'words', label: 'الكلمات', icon: Library },            
+      { id: 'mindmaps', label: 'خرائط ذهنية', icon: Network },
       { id: 'stories', label: 'القصص', icon: BookOpen },
       { id: 'notes', label: 'الملاحظات', icon: StickyNote },
       { id: 'lists', label: 'القوائم', icon: List },
@@ -890,6 +891,11 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
             {/* Review Page */}
             {activeNav === 'review' && !isReviewMode && (
               <motion.div key="review" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-4">
+              {activeNav === 'mindmaps' && (
+              <motion.div key="mindmaps" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <MindMapSection />
+              </motion.div>
+            )}
                 <Card className="border-0 shadow-md">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Brain className="w-5 h-5 text-violet-600" />المراجعة الذكية</CardTitle>
