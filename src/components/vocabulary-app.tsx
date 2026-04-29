@@ -49,6 +49,8 @@ import { LearningSectionSelector } from './learning-section-selector'
 import { RewardsStore } from './rewards-store'
 import { AdminDashboard } from './admin-dashboard'
 import { AdminAnnouncements } from './admin-announcements'
+import { MindMapSection } from './mind-map-section'
+import { Network } from 'lucide-react' // أيقونة الخريطة الذهنية
 
 // Level config
 const levelConfig: Record<string, { color: string; bg: string; label: string; gradient: string }> = {
