@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils' // <-- هذا هو السطر الذي كان مفقوداً
+import { cn } from '@/lib/utils'
 import { useVocabStore } from '@/store/vocab-store'
 
 interface Branch {
@@ -19,6 +19,8 @@ interface Branch {
 interface MindMapData {
   center_word: string
   branches: Branch[]
+  is_correct?: boolean
+  suggestions?: string[]
 }
 
 const branchColors = [
@@ -46,6 +48,15 @@ export function MindMapSection() {
     }
   }, [])
 
+  // السماح بالخروج من Fullscreen عبر زر Escape
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFullscreen(false)
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [])
+
   const generateMap = async (searchWord?: string) => {
     const query = searchWord || word
     if (!query.trim()) return
@@ -58,8 +69,19 @@ export function MindMapSection() {
         body: JSON.stringify({ word: query.trim(), userId: currentUserId }),
       })
       const data = await res.json()
-      if (data.success && data.data) setMapData(data.data)
-      else toast.error(data.error || 'Failed to generate mind map')
+
+      if (data.success && data.data) {
+        // فحص إذا كانت الكلمة خاطئة إملائياً
+        if (data.data.is_correct === false) {
+          const suggestions = data.data.suggestions?.join(', ') || 'No suggestions'
+          toast.error(`Word might be misspelled! Did you mean: ${suggestions}?`, { duration: 6000 })
+          setIsLoading(false)
+          return
+        }
+        setMapData(data.data)
+      } else {
+        toast.error(data.error || 'Failed to generate mind map')
+      }
     } catch { toast.error('Connection error') } finally { setIsLoading(false) }
   }
 
@@ -120,6 +142,17 @@ export function MindMapSection() {
               "relative bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden transition-all duration-300",
               isFullscreen ? "fixed inset-0 z-50 rounded-none" : "h-[600px] md:h-[700px]"
             )}>
+              
+              {/* زر الخروج من Fullscreen العائم */}
+              {isFullscreen && (
+                <Button 
+                  onClick={() => setIsFullscreen(false)} 
+                  className="absolute bottom-6 right-6 z-[60] bg-rose-500 hover:bg-rose-600 text-white rounded-full w-14 h-14 shadow-2xl flex items-center justify-center"
+                >
+                  <Minimize className="w-6 h-6" />
+                </Button>
+              )}
+
               <div ref={canvasRef} className="w-full h-full overflow-auto cursor-grab active:cursor-grabbing">
                 <div className="relative w-[800px] h-[800px] mx-auto" style={{ minHeight: '100%', minWidth: '100%' }}>
                   
