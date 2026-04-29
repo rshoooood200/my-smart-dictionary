@@ -193,11 +193,20 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
     if (isMobile) setSidebarOpen(false)
   }, [isMobile])
 
-  // Filter words
+  // Filter words - تم إصلاح مشكلة فلتر "الكل"
   const filteredWords = useMemo(() => words.filter(word => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       if (!word.word.toLowerCase().includes(query) && !word.translation.toLowerCase().includes(query)) return false
+    }
+    // إصلاح: تجاهل شرط التصنيف إذا كان "الكل"
+    if (selectedCategory !== 'all' && word.categoryId !== selectedCategory) return false
+    // إصلاح: تجاهل شرط المستوى إذا كان "الكل"
+    if (selectedLevel !== 'all' && word.level !== selectedLevel) return false
+    if (showOnlyFavorites && !word.isFavorite) return false
+    if (showOnlyLearned && !word.isLearned) return false
+    return true
+  }), [words, searchQuery, selectedCategory, selectedLevel, showOnlyFavorites, showOnlyLearned])
     }
     if (selectedCategory && word.categoryId !== selectedCategory) return false
     if (selectedLevel && word.level !== selectedLevel) return false
@@ -1247,7 +1256,16 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
       </main>
 
       {/* Dialogs */}
-      <AddWordDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
+            <AddWordDialog 
+        open={isAddDialogOpen} 
+        onOpenChange={setIsAddDialogOpen} 
+        categories={categories} 
+        onSuccess={() => {
+          loadWords();
+          loadStats();
+          checkAndAwardAchievements();
+        }} 
+      />
       <AddCategoryDialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen} />
       
       {/* Export PDF Dialog */}
