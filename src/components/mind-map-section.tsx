@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils' // <-- هذا هو السطر الذي كان مفقوداً
 import { useVocabStore } from '@/store/vocab-store'
 
 interface Branch {
@@ -114,7 +115,7 @@ export function MindMapSection() {
               </div>
             </div>
 
-            {/* Mind Map Canvas - Controls Pan & Zoom for Mobile */}
+            {/* Mind Map Canvas */}
             <div className={cn(
               "relative bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden transition-all duration-300",
               isFullscreen ? "fixed inset-0 z-50 rounded-none" : "h-[600px] md:h-[700px]"
