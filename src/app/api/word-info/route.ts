@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Enhanced prompt with STRICT instructions for 3 sentences
+    // Enhanced prompt with STRICT instructions for Arabic translation
     const prompt = `Analyze the English word: "${wordText}"
 
 FIRST: Check if "${wordText}" is spelled correctly.
@@ -49,9 +49,9 @@ Return a VALID JSON object with this EXACT structure:
   "synonyms": ["syn1", "syn2", "syn3"],
   "antonyms": ["ant1", "ant2"],
   "examples": [
-    {"en": "English sentence 1 using the word ${wordText}", "ar": "الترجمة العربية للجملة الأولى"},
-    {"en": "English sentence 2 using the word ${wordText}", "ar": "الترجمة العربية للجملة الثانية"},
-    {"en": "English sentence 3 using the word ${wordText}", "ar": "الترجمة العربية للجملة الثالثة"}
+    {"en": "English sentence 1 using the word ${wordText}", "ar": "الترجمة العربية الدقيقة للجملة الأولى"},
+    {"en": "English sentence 2 using the word ${wordText}", "ar": "الترجمة العربية الدقيقة للجملة الثانية"},
+    {"en": "English sentence 3 using the word ${wordText}", "ar": "الترجمة العربية الدقيقة للجملة الثالثة"}
   ],
   "usageNotes": "Brief usage note",
   "verbForms": {
@@ -75,12 +75,13 @@ Return a VALID JSON object with this EXACT structure:
 }
 
 CRITICAL RULES:
-1. You MUST generate EXACTLY 3 examples. Not 2, not 4. Exactly 3.
-2. Every example MUST have both "en" (English) and "ar" (Arabic translation).
-3. Only include verbForms if partOfSpeech is "verb"
-4. Only include nounForms if partOfSpeech is "noun"
-5. Only include adjectiveForms if partOfSpeech is "adjective"
-6. Return ONLY the JSON object, no other text.
+1. You MUST generate EXACTLY 3 examples.
+2. The "ar" field in examples MUST contain the ACCURATE ARABIC TRANSLATION of the "en" field. 
+3. NEVER leave the "ar" field empty, and NEVER put English text in the "ar" field. It must be pure Arabic.
+4. Only include verbForms if partOfSpeech is "verb"
+5. Only include nounForms if partOfSpeech is "noun"
+6. Only include adjectiveForms if partOfSpeech is "adjective"
+7. Return ONLY the JSON object, no other text.
 
 Word: "${wordText}"
 JSON:`;
@@ -113,8 +114,9 @@ JSON:`;
     let validSentences: { sentence: string; translation: string }[] = [];
     if (Array.isArray(wordData.examples) && wordData.examples.length > 0) {
       validSentences = wordData.examples
-        .filter(s => s.en && s.ar) // التأكد من وجود الجملة والترجمة
-        .slice(0, 3) // أخذ 3 جمل فقط
+        // الفلتر: نتأكد أن الجملة موجودة، وأن الترجمة تحتوي على حروف عربية حقيقية
+        .filter(s => s.en && s.ar && /[\u0600-\u06FF]/.test(s.ar)) 
+        .slice(0, 3)
         .map(s => ({
           sentence: s.en.trim(),
           translation: s.ar.trim(),
@@ -133,7 +135,6 @@ JSON:`;
       level: ['beginner', 'intermediate', 'advanced'].includes(wordData.level) ? wordData.level : 'beginner',
       synonyms: Array.isArray(wordData.synonyms) ? wordData.synonyms.slice(0, 8) : [],
       antonyms: Array.isArray(wordData.antonyms) ? wordData.antonyms.slice(0, 3) : [],
-      // دمج examples و sentences في مصفوفة واحدة نظيفة للواجهة
       sentences: validSentences, 
       usageNotes: wordData.usageNotes || '',
       arabicMeaning: wordData.arabicMeaning || '',
