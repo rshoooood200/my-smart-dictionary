@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Prompt محسّن خصيصاً لعقلية نموذج Qwen عبر OpenRouter
+    // Prompt بأسماء مفاتيح طويلة لإجبار Qwen على فصل اللغات وعدم الكسل
     const prompt = `You are a professional English-Arabic dictionary AI.
 Analyze the word: "${wordText}"
 
@@ -42,10 +42,19 @@ Return ONLY a valid JSON object using this exact structure. No markdown, no extr
   "level": "beginner",
   "synonyms": ["syn1", "syn2"],
   "antonyms": ["ant1", "ant2"],
-  "sentences": [
-    {"sentence": "English sentence 1 with ${wordText}", "translation": "ترجمة الجملة الأولى للعربية"},
-    {"sentence": "English sentence 2 with ${wordText}", "translation": "ترجمة الجملة الثانية للعربية"},
-    {"sentence": "English sentence 3 with ${wordText}", "translation": "ترجمة الجملة الثالثة للعربية"}
+  "sentences_array": [
+    {
+      "english_sentence": "English sentence 1 using ${wordText}",
+      "arabic_translation": "الترجمة العربية الدقيقة والكاملة للجملة الأولى فقط"
+    },
+    {
+      "english_sentence": "English sentence 2 using ${wordText}",
+      "arabic_translation": "الترجمة العربية الدقيقة والكاملة للجملة الثانية فقط"
+    },
+    {
+      "english_sentence": "English sentence 3 using ${wordText}",
+      "arabic_translation": "الترجمة العربية الدقيقة والكاملة للجملة الثالثة فقط"
+    }
   ],
   "usageNotes": "Brief English note",
   "verbForms": {"past": "", "pastParticiple": "", "present": "", "gerund": "", "thirdPerson": ""},
@@ -55,10 +64,10 @@ Return ONLY a valid JSON object using this exact structure. No markdown, no extr
 }
 
 STRICT RULES FOR QWEN:
-1. The "sentences" array MUST have EXACTLY 3 items.
-2. The "translation" key inside "sentences" MUST contain Arabic text only. DO NOT leave it empty. DO NOT put English text in it.
-3. For "verbForms", "nounForms", "adjectiveForms": If the word matches the type, fill the strings. If it doesn't match, leave all strings inside it empty "".
-4. If the word is misspelled, set isCorrect to false, provide correctWord and suggestions, but still provide the analysis for the CORRECT word.
+1. The "sentences_array" MUST have EXACTLY 3 items.
+2. The "arabic_translation" MUST contain Arabic text only. DO NOT leave it empty. DO NOT put English text in it. It must be the exact translation of "english_sentence".
+3. For "verbForms", "nounForms", "adjectiveForms": If the word matches the type, fill the strings. If not, leave them empty "".
+4. If the word is misspelled, set isCorrect to false, provide correctWord and suggestions.
 5. Output ONLY raw valid JSON.
 
 Word: "${wordText}"`;
@@ -69,21 +78,21 @@ Word: "${wordText}"`;
     const isCorrect = wordData.isCorrect !== false;
     const correctWord = isCorrect ? wordText : (wordData.correctWord || wordText);
 
-    // تنظيف الجمل والتأكد من وجود ترجمة عربية حقيقية
+    // تنظيف الجمل وتحوير أسماء المفاتيح الطويلة التي أرسلناها لـ Qwen إلى الأسماء التي تفهمها الواجهة
     let validSentences: { sentence: string; translation: string }[] = [];
-    const rawSentences = wordData.sentences || wordData.examples || [];
+    const rawSentences = wordData.sentences_array || wordData.sentences || wordData.examples || [];
     if (Array.isArray(rawSentences) && rawSentences.length > 0) {
       validSentences = rawSentences
         .map((s: any) => ({
-          sentence: (s.sentence || s.en || '').trim(),
-          translation: (s.translation || s.ar || '').trim()
+          sentence: (s.english_sentence || s.sentence || s.en || '').trim(),
+          translation: (s.arabic_translation || s.translation || s.ar || '').trim()
         }))
-        // فلتر صارم: يجب أن تحتوي الترجمة على حروف عربية
-        .filter(s => s.sentence && s.translation && /[\u0600-\u06FF]/.test(s.translation))
+        // نتأكد فقط أن الحقلين ليسا فارغين
+        .filter(s => s.sentence && s.translation)
         .slice(0, 3);
     }
 
-    // دالة تنظيف التصريفات (Forms) لضمان عدم انهيار الواجهة
+    // دالة تنظيف التصريفات لضمان عدم انهيار الواجهة
     const cleanForm = (form: any, keys: string[]) => {
       const cleaned: Record<string, any> = {};
       keys.forEach(key => {
@@ -96,7 +105,6 @@ Word: "${wordText}"`;
     const nounForms = cleanForm(wordData.nounForms, ['singular', 'plural']);
     const adjectiveForms = cleanForm(wordData.adjectiveForms, ['comparative', 'superlative', 'adverb']);
 
-    // معالجة خاصة لخاصية countable لأنها Boolean وليست String
     if (wordData.nounForms && typeof wordData.nounForms.countable === 'boolean') {
       nounForms.countable = wordData.nounForms.countable;
     }
