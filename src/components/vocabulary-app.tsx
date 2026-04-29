@@ -11,7 +11,7 @@ import {
   Flame, LogOut, VolumeX, ChevronRight, ChevronLeft, ChevronDown,
   Trophy, Clock, Shuffle, Lightbulb, Heart, Sparkles, FolderOpen, MessageSquare, FileText, Loader2, StickyNote,
   Keyboard, AlignLeft, Headphones, Timer, GraduationCap, Mic, Database, List, Route, Bell, BarChart3,
-  Tv, Newspaper, Quote, Puzzle, CalendarDays, Video, Podcast, Wifi, WifiOff, LucideIcon, Trash2
+  Tv, Newspaper, Quote, Puzzle, CalendarDays, Video, Podcast, Wifi, WifiOff, LucideIcon, Trash2, Network
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,7 +50,6 @@ import { RewardsStore } from './rewards-store'
 import { AdminDashboard } from './admin-dashboard'
 import { AdminAnnouncements } from './admin-announcements'
 import { MindMapSection } from './mind-map-section'
-import { Network } from 'lucide-react' // أيقونة الخريطة الذهنية
 
 // Level config
 const levelConfig: Record<string, { color: string; bg: string; label: string; gradient: string }> = {
@@ -79,7 +78,7 @@ const navItems: NavItem[] = [
     label: 'القاموس الذكي', 
     icon: BookOpen,
     children: [
-      { id: 'words', label: 'الكلمات', icon: Library },            
+      { id: 'words', label: 'الكلمات', icon: Library },
       { id: 'mindmaps', label: 'خرائط ذهنية', icon: Network },
       { id: 'stories', label: 'القصص', icon: BookOpen },
       { id: 'notes', label: 'الملاحظات', icon: StickyNote },
@@ -888,14 +887,16 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
               </motion.div>
             )}
 
-            {/* Review Page */}
-            {activeNav === 'review' && !isReviewMode && (
-              <motion.div key="review" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-4">
-              {activeNav === 'mindmaps' && (
+            {/* Mind Maps Page */}
+            {activeNav === 'mindmaps' && (
               <motion.div key="mindmaps" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <MindMapSection />
               </motion.div>
             )}
+
+            {/* Review Page */}
+            {activeNav === 'review' && !isReviewMode && (
+              <motion.div key="review" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-4">
                 <Card className="border-0 shadow-md">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Brain className="w-5 h-5 text-violet-600" />المراجعة الذكية</CardTitle>
