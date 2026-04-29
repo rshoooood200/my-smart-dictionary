@@ -121,8 +121,8 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
   })
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<string>('')
-  const [selectedLevel, setSelectedLevel] = useState<string>('')
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [selectedLevel, setSelectedLevel] = useState<string>('all')
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false)
   const [showOnlyLearned, setShowOnlyLearned] = useState(false)
   const [darkMode, setDarkMode] = useState(false)

@@ -61,7 +61,7 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
   const [englishDefinition, setEnglishDefinition] = useState('')
   const [context, setContext] = useState('')
   
-  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
 
   const resetForm = () => {

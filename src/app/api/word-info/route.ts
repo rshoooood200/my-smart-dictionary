@@ -131,12 +131,12 @@ JSON:`;
       partOfSpeech: validPartsOfSpeech.includes(wordData.partOfSpeech) ? wordData.partOfSpeech : '',
       level: ['beginner', 'intermediate', 'advanced'].includes(wordData.level) ? wordData.level : 'beginner',
       synonyms: Array.isArray(wordData.synonyms) ? wordData.synonyms.slice(0, 8) : [],
-      antonyms: Array.isArray(wordData.antonyms) ? wordData.antonyms.slice(0, 5) : [],
+      antonyms: Array.isArray(wordData.antonyms) ? wordData.antonyms.slice(0, 3) : [],
       examples: Array.isArray(wordData.examples)
-        ? wordData.examples.slice(0, 5).map(s => s.en || '')
+        ? wordData.examples.slice(0, 3).map(s => s.en || '')
         : [],
       sentences: Array.isArray(wordData.examples)
-        ? wordData.examples.slice(0, 5).map(s => ({
+        ? wordData.examples.slice(0, 3).map(s => ({
             sentence: s.en || '',
             translation: s.ar || '',
           }))
