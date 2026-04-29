@@ -13,95 +13,92 @@ export async function POST(request: NextRequest) {
 
     const wordText = word.toLowerCase().trim();
 
-    // Check if user has an API key stored
     let userApiKey: string | undefined;
     if (userId) {
       try {
-        const config = await db.geminiConfig.findUnique({
-          where: { userId }
-        });
+        const config = await db.geminiConfig.findUnique({ where: { userId } });
         if (config?.apiKey) {
           userApiKey = config.apiKey;
           console.log('[Word-Info] Using user API key');
         }
       } catch (dbError) {
-        console.log('[Word-Info] Could not fetch user API key, using server key');
+        console.log('[Word-Info] Could not fetch user API key');
       }
     }
 
-    // Prompt مُحسّن خصيصاً لنماذج Qwen عبر OpenRouter
-    const prompt = `You are an expert English-Arabic linguist and dictionary.
-Analyze the English word: "${wordText}"
+    // Prompt محسّن خصيصاً لعقلية نموذج Qwen عبر OpenRouter
+    const prompt = `You are a professional English-Arabic dictionary AI.
+Analyze the word: "${wordText}"
 
-Return a VALID JSON object. Do not add any text before or after the JSON.
-
+Return ONLY a valid JSON object using this exact structure. No markdown, no extra text.
 {
   "isCorrect": true,
   "correctWord": null,
   "suggestions": [],
-  "translation": "الترجمة العربية للكلمة",
+  "translation": "الكلمة بالعربي",
   "pronunciation": "/IPA/",
   "definition": "English definition",
   "partOfSpeech": "noun",
   "level": "beginner",
-  "synonyms": ["syn1", "syn2", "syn3"],
+  "synonyms": ["syn1", "syn2"],
   "antonyms": ["ant1", "ant2"],
-  "examples": [
-    {"en": "English sentence 1 using ${wordText}.", "ar": "الترجمة العربية الدقيقة للجملة الأولى فقط"},
-    {"en": "English sentence 2 using ${wordText}.", "ar": "الترجمة العربية الدقيقة للجملة الثانية فقط"},
-    {"en": "English sentence 3 using ${wordText}.", "ar": "الترجمة العربية الدقيقة للجملة الثالثة فقط"}
+  "sentences": [
+    {"sentence": "English sentence 1 with ${wordText}", "translation": "ترجمة الجملة الأولى للعربية"},
+    {"sentence": "English sentence 2 with ${wordText}", "translation": "ترجمة الجملة الثانية للعربية"},
+    {"sentence": "English sentence 3 with ${wordText}", "translation": "ترجمة الجملة الثالثة للعربية"}
   ],
-  "usageNotes": "Brief usage note in English",
-  "verbForms": {},
-  "nounForms": {},
-  "adjectiveForms": {},
-  "arabicMeaning": "شرح مفصل باللغة العربية"
+  "usageNotes": "Brief English note",
+  "verbForms": {"past": "", "pastParticiple": "", "present": "", "gerund": "", "thirdPerson": ""},
+  "nounForms": {"singular": "", "plural": "", "countable": true},
+  "adjectiveForms": {"comparative": "", "superlative": "", "adverb": ""},
+  "arabicMeaning": "شرح عربي مفصل"
 }
 
-CRITICAL RULES FOR QWEN:
-1. The "examples" array MUST contain EXACTLY 3 items.
-2. The "ar" field in the examples MUST contain the ARABIC TRANSLATION of the "en" field.
-3. NEVER write English words in the "ar" field. The "ar" field must be 100% Arabic text.
-4. If the word is misspelled, set "isCorrect": false, provide "correctWord", and fill the "suggestions" array.
-5. Only include verbForms if partOfSpeech is "verb", nounForms if "noun", adjectiveForms if "adjective". Otherwise leave them as empty objects {}.
-6. Output ONLY valid JSON.
+STRICT RULES FOR QWEN:
+1. The "sentences" array MUST have EXACTLY 3 items.
+2. The "translation" key inside "sentences" MUST contain Arabic text only. DO NOT leave it empty. DO NOT put English text in it.
+3. For "verbForms", "nounForms", "adjectiveForms": If the word matches the type, fill the strings. If it doesn't match, leave all strings inside it empty "".
+4. If the word is misspelled, set isCorrect to false, provide correctWord and suggestions, but still provide the analysis for the CORRECT word.
+5. Output ONLY raw valid JSON.
 
 Word: "${wordText}"`;
 
-    const wordData = await callGeminiJSON<{
-      isCorrect: boolean;
-      correctWord?: string;
-      suggestions?: string[];
-      translation: string;
-      pronunciation: string;
-      definition: string;
-      partOfSpeech: string;
-      level: string;
-      synonyms: string[];
-      antonyms: string[];
-      examples: { en: string; ar: string }[];
-      usageNotes: string;
-      verbForms?: any;
-      nounForms?: any;
-      adjectiveForms?: any;
-      arabicMeaning?: string;
-    }>(prompt, undefined, userApiKey);
+    const wordData = await callGeminiJSON<any>(prompt, undefined, userApiKey);
 
     const validPartsOfSpeech = ['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'pronoun', 'interjection', 'phrasal_verb', 'idiom'];
-    
     const isCorrect = wordData.isCorrect !== false;
     const correctWord = isCorrect ? wordText : (wordData.correctWord || wordText);
-    
-    // عملية تنظيف وتجهيز الجمل مع فلتر صارم للتأكد من وجود حروف عربية
+
+    // تنظيف الجمل والتأكد من وجود ترجمة عربية حقيقية
     let validSentences: { sentence: string; translation: string }[] = [];
-    if (Array.isArray(wordData.examples) && wordData.examples.length > 0) {
-      validSentences = wordData.examples
-        .filter(s => s.en && s.ar && /[\u0600-\u06FF]/.test(s.ar)) // يتأكد أن حقل ar يحتوي على حروف عربية حقيقية
-        .slice(0, 3)
-        .map(s => ({
-          sentence: s.en.trim(),
-          translation: s.ar.trim(),
-        }));
+    const rawSentences = wordData.sentences || wordData.examples || [];
+    if (Array.isArray(rawSentences) && rawSentences.length > 0) {
+      validSentences = rawSentences
+        .map((s: any) => ({
+          sentence: (s.sentence || s.en || '').trim(),
+          translation: (s.translation || s.ar || '').trim()
+        }))
+        // فلتر صارم: يجب أن تحتوي الترجمة على حروف عربية
+        .filter(s => s.sentence && s.translation && /[\u0600-\u06FF]/.test(s.translation))
+        .slice(0, 3);
+    }
+
+    // دالة تنظيف التصريفات (Forms) لضمان عدم انهيار الواجهة
+    const cleanForm = (form: any, keys: string[]) => {
+      const cleaned: Record<string, any> = {};
+      keys.forEach(key => {
+        cleaned[key] = (form && form[key] && typeof form[key] === 'string') ? form[key].trim() : "";
+      });
+      return cleaned;
+    };
+
+    const verbForms = cleanForm(wordData.verbForms, ['past', 'pastParticiple', 'present', 'gerund', 'thirdPerson']);
+    const nounForms = cleanForm(wordData.nounForms, ['singular', 'plural']);
+    const adjectiveForms = cleanForm(wordData.adjectiveForms, ['comparative', 'superlative', 'adverb']);
+
+    // معالجة خاصة لخاصية countable لأنها Boolean وليست String
+    if (wordData.nounForms && typeof wordData.nounForms.countable === 'boolean') {
+      nounForms.countable = wordData.nounForms.countable;
     }
 
     const validatedData = {
@@ -114,14 +111,14 @@ Word: "${wordText}"`;
       definition: wordData.definition || '',
       partOfSpeech: validPartsOfSpeech.includes(wordData.partOfSpeech) ? wordData.partOfSpeech : '',
       level: ['beginner', 'intermediate', 'advanced'].includes(wordData.level) ? wordData.level : 'beginner',
-      synonyms: Array.isArray(wordData.synonyms) ? wordData.synonyms.slice(0, 8) : [],
-      antonyms: Array.isArray(wordData.antonyms) ? wordData.antonyms.slice(0, 3) : [],
+      synonyms: Array.isArray(wordData.synonyms) ? wordData.synonyms.filter(Boolean).slice(0, 8) : [],
+      antonyms: Array.isArray(wordData.antonyms) ? wordData.antonyms.filter(Boolean).slice(0, 3) : [],
       sentences: validSentences, 
       usageNotes: wordData.usageNotes || '',
       arabicMeaning: wordData.arabicMeaning || '',
-      verbForms: wordData.verbForms || {},
-      nounForms: wordData.nounForms || {},
-      adjectiveForms: wordData.adjectiveForms || {},
+      verbForms,
+      nounForms,
+      adjectiveForms,
     };
 
     return NextResponse.json({ success: true, data: validatedData });
