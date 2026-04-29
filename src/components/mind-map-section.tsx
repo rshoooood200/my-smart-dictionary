@@ -12,7 +12,6 @@ import { useVocabStore } from '@/store/vocab-store'
 
 interface Branch {
   category_name: string
-  arabic_category: string
   words: string[]
 }
 
@@ -52,10 +51,10 @@ export function MindMapSection() {
       if (data.success && data.data) {
         setMapData(data.data)
       } else {
-        toast.error(data.error || 'فشل في توليد الخريطة الذهنية')
+        toast.error(data.error || 'Failed to generate mind map')
       }
     } catch (error) {
-      toast.error('حدث خطأ في الاتصال')
+      toast.error('Connection error')
     } finally {
       setIsLoading(false)
     }
@@ -67,25 +66,26 @@ export function MindMapSection() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="w-5 h-5 text-violet-600" />
-            الخرائط الذهنية للكلمات
+            Mind Maps
           </CardTitle>
-          <p className="text-sm text-gray-500">أدخل كلمة وسيتم تصميم خريطة ذهنية توضح كل الكلمات المرتبطة بها بشكل احترافي</p>
+          <p className="text-sm text-gray-500">Enter a word to generate a mind map of related English words</p>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="اكتب كلمة بالإنجليزية (مثال: Adventure)..."
+                placeholder="Type an English word (e.g., Adventure)..."
                 value={word}
                 onChange={(e) => setWord(e.target.value)}
                 className="pr-10"
                 onKeyDown={(e) => e.key === 'Enter' && generateMap()}
+                dir="ltr"
               />
             </div>
             <Button onClick={generateMap} disabled={isLoading || !word} className="bg-violet-600 hover:bg-violet-700">
               {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-              توليد الخريطة
+              Generate
             </Button>
           </div>
         </CardContent>
@@ -97,14 +97,14 @@ export function MindMapSection() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="relative w-full overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-8"
-            style={{ minHeight: '500px' }}
+            // إصلاح: تم إزالة overflow-hidden وتقليل حجم الدائرة لتناسب الشاشة دون قطع القائمة
+            className="relative w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-8 min-h-[600px]"
           >
-            {/* SVG Lines Background */}
+            {/* SVG Lines */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
               {mapData.branches.map((branch, index) => {
                 const angle = (2 * Math.PI * index) / mapData.branches.length - Math.PI / 2
-                const radius = 38
+                const radius = 30 // تقليل نصف القطر لتبقى الفروع داخل الحدود
                 const x = 50 + radius * Math.cos(angle)
                 const y = 50 + radius * Math.sin(angle)
                 
@@ -131,15 +131,15 @@ export function MindMapSection() {
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 200, damping: 15 }}
             >
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-2xl border-4 border-white dark:border-gray-800">
-                <span className="text-white font-bold text-xl text-center px-2">{mapData.center_word}</span>
+              <div className="w-28 h-28 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-2xl border-4 border-white dark:border-gray-800">
+                <span className="text-white font-bold text-lg text-center px-2">{mapData.center_word}</span>
               </div>
             </motion.div>
 
             {/* Branches */}
             {mapData.branches.map((branch, index) => {
               const angle = (2 * Math.PI * index) / mapData.branches.length - Math.PI / 2
-              const radius = 38
+              const radius = 30 // تقليل نصف القطر
               const x = 50 + radius * Math.cos(angle)
               const y = 50 + radius * Math.sin(angle)
               const color = branchColors[index % branchColors.length]
@@ -147,7 +147,7 @@ export function MindMapSection() {
               return (
                 <motion.div
                   key={index}
-                  className="absolute z-10 w-48"
+                  className="absolute w-44"
                   style={{ top: `${y}%`, left: `${x}%`, transform: 'translate(-50%, -50%)' }}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -156,7 +156,7 @@ export function MindMapSection() {
                   <Card className={`shadow-lg border-2 ${color.border} ${color.bg}`}>
                     <CardContent className="p-3">
                       <Badge variant="outline" className={`mb-2 text-xs ${color.text} border-current`}>
-                        {branch.arabic_category}
+                        {branch.category_name}
                       </Badge>
                       <div className="flex flex-wrap gap-1.5">
                         {branch.words.map((w, i) => (
