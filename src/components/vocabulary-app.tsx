@@ -923,12 +923,7 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
               </motion.div>
             )}
 
-            {/* Review Page */}
-            {activeNav === 'review' && !isReviewMode && (
-            
-            )}
-
-            {/* Review Page */}
+                      {/* Review Page */}
             {activeNav === 'review' && !isReviewMode && (
               <motion.div key="review" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-4">
                 <Card className="border-0 shadow-md">
