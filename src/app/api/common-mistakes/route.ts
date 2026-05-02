@@ -20,30 +20,41 @@ Generate a list of 5 common mistakes Arabic speakers make when learning English.
 For each mistake, provide:
 1. "incorrect": The incorrect usage or confused word.
 2. "correct": The correct usage or word.
-3. "explanation": A brief explanation in Arabic of why it's wrong and the difference.
+3. "explanation": A brief explanation in Arabic of why it's wrong.
 4. "example_incorrect": A short sentence showing the wrong usage.
 5. "example_correct": A short sentence showing the correct usage.
 6. "quiz_question": A fill-in-the-blank question to test the user.
 7. "quiz_answer": The correct word for the blank.
 
-Return ONLY valid JSON array. No markdown.
-[
-  {
-    "incorrect": "Do a mistake",
-    "correct": "Make a mistake",
-    "explanation": "في الإنجليزية نستخدم Make مع Mistake وليس Do، لأن Mistake تعتبر شيئاً يتم صنعه/تكوينه وليس أداءً.",
-    "example_incorrect": "I did a mistake.",
-    "example_correct": "I made a mistake.",
-    "quiz_question": "She _____ a mistake on the test. (Did / Made)",
-    "quiz_answer": "Made"
-  }
-]`;
+Return ONLY valid JSON object. No markdown.
+{
+  "mistakes": [
+    {
+      "incorrect": "Do a mistake",
+      "correct": "Make a mistake",
+      "explanation": "في الإنجليزية نستخدم Make مع Mistake وليس Do.",
+      "example_incorrect": "I did a mistake.",
+      "example_correct": "I made a mistake.",
+      "quiz_question": "She _____ a mistake on the test. (Did / Made)",
+      "quiz_answer": "Made"
+    }
+  ]
+}
 
-    const data = await callGeminiJSON<any>(prompt, undefined, userApiKey);
+STRICT RULES:
+1. Generate exactly 5 mistakes.
+2. All explanations must be in Arabic, other text in English.
+3. Output ONLY raw valid JSON.`;
 
-    if (!data) return NextResponse.json({ success: false, error: 'Failed to generate' }, { status: 500 });
-    return NextResponse.json({ success: true, data: Array.isArray(data) ? data : [] });
+    const result = await callGeminiJSON<any>(prompt, undefined, userApiKey);
+
+    if (!result || !result.mistakes) {
+      return NextResponse.json({ success: false, error: 'Failed to generate mistakes' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, data: result.mistakes });
   } catch (error: any) {
+    console.error('Error common mistakes:', error);
     return NextResponse.json({ success: false, error: 'Server error' }, { status: 500 });
   }
 }
