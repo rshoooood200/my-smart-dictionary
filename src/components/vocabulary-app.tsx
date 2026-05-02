@@ -50,6 +50,10 @@ import { RewardsStore } from './rewards-store'
 import { AdminDashboard } from './admin-dashboard'
 import { AdminAnnouncements } from './admin-announcements'
 import { MindMapSection } from './mind-map-section'
+import { CommonMistakesSection } from './common-mistakes-section'
+import { CollocationsWeb } from './collocations-web'
+import { PronunciationCoach } from './pronunciation-coach'
+import { AlertCircle, Layers } from 'lucide-react' // أضفها لأيقونات القائمة
 
 // Level config
 const levelConfig: Record<string, { color: string; bg: string; label: string; gradient: string }> = {
@@ -74,12 +78,16 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'home', label: 'الرئيسية', icon: Home },
   { 
+      
     id: 'dictionary', 
     label: 'القاموس الذكي', 
     icon: BookOpen,
     children: [
       { id: 'words', label: 'الكلمات', icon: Library },
       { id: 'mindmaps', label: 'خرائط ذهنية', icon: Network },
+      { id: 'collocations', label: 'تراكيب لغوية', icon: Layers }, // جديد
+      { id: 'mistakes', label: 'أخطاء شائعة', icon: AlertCircle }, // جديد
+      { id: 'pronunciation', label: 'مدرب النطق', icon: Mic }, // جديد
       { id: 'stories', label: 'القصص', icon: BookOpen },
       { id: 'notes', label: 'الملاحظات', icon: StickyNote },
       { id: 'lists', label: 'القوائم', icon: List },
@@ -892,6 +900,21 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
               <motion.div key="mindmaps" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <MindMapSection />
               </motion.div>
+                {activeNav === 'collocations' && (
+              <motion.div key="collocations" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <CollocationsWeb />
+              </motion.div>
+            )}
+            {activeNav === 'mistakes' && (
+              <motion.div key="mistakes" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <CommonMistakesSection />
+              </motion.div>
+            )}
+            {activeNav === 'pronunciation' && (
+              <motion.div key="pronunciation" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <PronunciationCoach />
+              </motion.div>
+            
             )}
 
             {/* Review Page */}
