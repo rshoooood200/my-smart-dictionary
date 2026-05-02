@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils' // تم إضافة هذا السطر
 import { useVocabStore } from '@/store/vocab-store'
 
 interface Mistake {
@@ -97,7 +96,7 @@ export function CommonMistakesSection() {
                             <Button size="sm" onClick={checkAnswer} disabled={!userAnswer}>Check</Button>
                           </div>
                           {showResult && (
-                            <p className={cn("text-sm font-medium", userAnswer.toLowerCase().trim() === mistake.quiz_answer.toLowerCase() ? "text-emerald-600" : "text-rose-600")}>
+                            <p className={`text-sm font-medium ${userAnswer.toLowerCase().trim() === mistake.quiz_answer.toLowerCase() ? "text-emerald-600" : "text-rose-600"}`}>
                               {userAnswer.toLowerCase().trim() === mistake.quiz_answer.toLowerCase() ? 'Correct!' : `Wrong! The correct answer is: ${mistake.quiz_answer}`}
                             </p>
                           )}
