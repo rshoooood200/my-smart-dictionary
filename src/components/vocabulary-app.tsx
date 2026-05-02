@@ -895,25 +895,36 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
               </motion.div>
             )}
 
-            {/* Mind Maps Page */}
+                     {/* Mind Maps Page */}
             {activeNav === 'mindmaps' && (
               <motion.div key="mindmaps" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <MindMapSection />
               </motion.div>
-                {activeNav === 'collocations' && (
+            )}
+
+            {/* Collocations Web */}
+            {activeNav === 'collocations' && (
               <motion.div key="collocations" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <CollocationsWeb />
               </motion.div>
             )}
+
+            {/* Common Mistakes */}
             {activeNav === 'mistakes' && (
               <motion.div key="mistakes" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <CommonMistakesSection />
               </motion.div>
             )}
+
+            {/* Pronunciation Coach */}
             {activeNav === 'pronunciation' && (
               <motion.div key="pronunciation" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <PronunciationCoach />
               </motion.div>
+            )}
+
+            {/* Review Page */}
+            {activeNav === 'review' && !isReviewMode && (
             
             )}
 
