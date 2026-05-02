@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  BookOpen, Plus, Search, Star,
+  BookOpen, Plus, Search, Star, AlertCircle,
   Download, Upload, Moon, Sun, Menu, X,
   RefreshCw, Check, Volume2, Eye,
   Brain, Target, Award, Zap, Layers, Filter,
@@ -53,7 +53,6 @@ import { MindMapSection } from './mind-map-section'
 import { CommonMistakesSection } from './common-mistakes-section'
 import { CollocationsWeb } from './collocations-web'
 import { PronunciationCoach } from './pronunciation-coach'
-import { AlertCircle, Layers } from 'lucide-react' // أضفها لأيقونات القائمة
 
 // Level config
 const levelConfig: Record<string, { color: string; bg: string; label: string; gradient: string }> = {
