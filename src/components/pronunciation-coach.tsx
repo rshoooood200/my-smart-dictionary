@@ -49,7 +49,7 @@ export function PronunciationCoach() {
       calculateAccuracy(transcript, targetWord.toLowerCase());
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = () => {
       setIsListening(false);
       toast.error('Mic error. Try again.');
     };
@@ -68,7 +68,7 @@ export function PronunciationCoach() {
     const score = Math.round((matches / maxLen) * 100);
     setAccuracy(score);
     if (score > 80) toast.success('Good job! Very close!');
-    else toast.error('Needs practice. Listen to the correct pronunciation and try again.');
+    else toast.error('Needs practice. Listen and try again.');
   }
 
   const speakWord = () => {
@@ -103,7 +103,7 @@ export function PronunciationCoach() {
                 {!speechSupported ? (
                   <Button disabled className="rounded-full w-16 h-16"><MicOff className="w-8 h-8" /></Button>
                 ) : (
-                  <Button onClick={isListening ? () => {} : startListening} className={cn("rounded-full w-16 h-16 transition-colors", isListening ? "bg-rose-500 hover:bg-rose-600 animate-pulse" : "bg-emerald-500 hover:bg-emerald-600")}>
+                  <Button onClick={isListening ? () => {} : startListening} className={`rounded-full w-16 h-16 transition-colors ${isListening ? "bg-rose-500 hover:bg-rose-600 animate-pulse" : "bg-emerald-500 hover:bg-emerald-600"}`}>
                     {isListening ? <MicOff className="w-8 h-8 text-white" /> : <Mic className="w-8 h-8 text-white" />}
                   </Button>
                 )}
@@ -122,9 +122,9 @@ export function PronunciationCoach() {
                 <div className="space-y-2 max-w-xs mx-auto">
                   <div className="flex justify-between text-sm font-medium">
                     <span>Accuracy</span>
-                    <span className={cn(accuracy === 100 ? "text-emerald-600" : accuracy > 70 ? "text-amber-600" : "text-rose-600")}>{accuracy}%</span>
+                    <span className={accuracy === 100 ? "text-emerald-600" : accuracy > 70 ? "text-amber-600" : "text-rose-600"}>{accuracy}%</span>
                   </div>
-                  <Progress value={accuracy} className={cn("h-3", accuracy === 100 ? "[&>div]:bg-emerald-500" : accuracy > 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-rose-500")} />
+                  <Progress value={accuracy} className={`h-3 ${accuracy === 100 ? "[&>div]:bg-emerald-500" : accuracy > 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-rose-500"}`} />
                   {accuracy === 100 && <div className="flex items-center justify-center gap-2 text-emerald-600 font-bold"><Check className="w-5 h-5" /> Perfect!</div>}
                   {accuracy < 100 && accuracy > 0 && (
                     <div className="flex items-center justify-center gap-2 text-amber-600 text-sm">
