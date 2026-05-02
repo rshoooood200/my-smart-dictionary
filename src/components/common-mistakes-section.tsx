@@ -6,7 +6,9 @@ import { AlertCircle, Check, Loader2, Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils' // تم إضافة هذا السطر
 import { useVocabStore } from '@/store/vocab-store'
 
 interface Mistake {
@@ -35,7 +37,7 @@ export function CommonMistakesSection() {
       })
       const data = await res.json()
       if (data.success && data.data) setMistakes(data.data)
-      else toast.error('Failed to load')
+      else toast.error(data.error || 'Failed to load')
     } catch { toast.error('Error') } finally { setIsLoading(false) }
   }
 
@@ -75,9 +77,10 @@ export function CommonMistakesSection() {
                   <p className="text-sm text-gray-600 dark:text-gray-400" dir="rtl">{mistake.explanation}</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                    <div className="p-2 bg-rose-50 dark:bg-rose-950/30 rounded-lg"><X className="w-3 h-3 inline text-rose-500 mr-1" />{mistake.example_incorrect}</div>
+                    <div className="p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg"><Check className="w-3 h-3 inline text-emerald-500 mr-1" />{mistake.example_correct}</div>
                   </div>
-                  <div className="p-2 bg-rose-50 dark:bg-rose-950/30 rounded-lg"><X className="w-3 h-3 inline text-rose-500 mr-1" />{mistake.example_incorrect}</div> 
-                  <div className="p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg"><Check className="w-3 h-3 inline text-emerald-500 mr-1" />{mistake.example_correct}</div>
+
                   <div className="mt-2 pt-2 border-t">
                     <Button variant="outline" size="sm" onClick={() => { setCurrentQuiz(index); setUserAnswer(''); setShowResult(false) }}>
                       Take Quick Quiz
