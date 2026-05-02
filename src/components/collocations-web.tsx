@@ -8,17 +8,16 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
 import { useVocabStore } from '@/store/vocab-store'
 
 interface Branch { category_name: string; words: string[] }
 interface CollocationData { center_word: string; branches: Branch[] }
 
 const collColors = [
-  { bg: 'bg-blue-50 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-400', border: 'border-blue-400' },
-  { bg: 'bg-violet-50 dark:bg-violet-900/30', text: 'text-violet-700 dark:text-violet-400', border: 'border-violet-400' },
-  { bg: 'bg-teal-50 dark:bg-teal-900/30', text: 'text-teal-700 dark:text-teal-400', border: 'border-teal-400' },
-  { bg: 'bg-orange-50 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-400', border: 'border-orange-400' },
+  { bg: 'bg-blue-50 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-400', border: 'border-t-blue-400' },
+  { bg: 'bg-violet-50 dark:bg-violet-900/30', text: 'text-violet-700 dark:text-violet-400', border: 'border-t-violet-400' },
+  { bg: 'bg-teal-50 dark:bg-teal-900/30', text: 'text-teal-700 dark:text-teal-400', border: 'border-t-teal-400' },
+  { bg: 'bg-orange-50 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-400', border: 'border-t-orange-400' },
 ]
 
 export function CollocationsWeb() {
@@ -70,12 +69,12 @@ export function CollocationsWeb() {
                 const color = collColors[index % collColors.length]
                 return (
                   <motion.div key={index} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.1 }}>
-                    <Card className={cn("border-t-4 shadow-sm", color.bg, color.border)}>
+                    <Card className={`border-t-4 shadow-sm ${color.bg} ${color.border}`}>
                       <CardContent className="p-4">
-                        <h3 className={cn("font-bold mb-3", color.text)}>{branch.category_name}</h3>
+                        <h3 className={`font-bold mb-3 ${color.text}`}>{branch.category_name}</h3>
                         <div className="flex flex-wrap gap-2">
                           {branch.words.map((w, i) => (
-                            <Badge key={i} variant="outline" className={cn("bg-white/50 dark:bg-black/20", color.text, "border-current/30")}>{w}</Badge>
+                            <Badge key={i} variant="outline" className={`bg-white/50 dark:bg-black/20 ${color.text} border-current/30`}>{w}</Badge>
                           ))}
                         </div>
                       </CardContent>
