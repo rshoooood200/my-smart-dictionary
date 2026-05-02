@@ -75,10 +75,9 @@ export function CommonMistakesSection() {
                   <p className="text-sm text-gray-600 dark:text-gray-400" dir="rtl">{mistake.explanation}</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                    <div className="p-2 bg-rose-50 dark:bg-rose-950/30 rounded-lg"><X className="w-3 h-3 inline text-rose-500 mr-1/>{mistake.example_incorrect}</div>
-                    <div className="p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg"><Check className="w-3 h-3 inline text-emerald-500 mr-1/>{mistake.example_correct}</div>
                   </div>
-
+                  <div className="p-2 bg-rose-50 dark:bg-rose-950/30 rounded-lg"><X className="w-3 h-3 inline text-rose-500 mr-1" />{mistake.example_incorrect}</div> 
+                  <div className="p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg"><Check className="w-3 h-3 inline text-emerald-500 mr-1" />{mistake.example_correct}</div>
                   <div className="mt-2 pt-2 border-t">
                     <Button variant="outline" size="sm" onClick={() => { setCurrentQuiz(index); setUserAnswer(''); setShowResult(false) }}>
                       Take Quick Quiz
