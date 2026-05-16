@@ -6,7 +6,7 @@ import {
   Search, Volume2, Loader2, Sparkles, Headphones,
   AlertTriangle, CheckCircle, ArrowRight, BookOpen,
   Lightbulb, MessageSquare, History, X, ChevronLeft,
-  Mic, Target, RefreshCw, VolumeX
+  Mic, Target, RefreshCw, VolumeX, AlertCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { useSpellCheck } from '@/hooks/use-spell-check'
 
 // ============== TYPES ==============
 
@@ -99,6 +100,8 @@ export function PronunciationTrainerAI({ currentUserId }: PronunciationTrainerAI
     window.speechSynthesis.speak(utterance)
   }, [])
 
+  const { spellError, isChecking, checkWord, clearError } = useSpellCheck()
+
   // ============== SEARCH ==============
 
   const handleSearch = useCallback(async (wordToSearch?: string) => {
@@ -107,6 +110,11 @@ export function PronunciationTrainerAI({ currentUserId }: PronunciationTrainerAI
       toast.error('الرجاء إدخال كلمة')
       return
     }
+
+    // Spell check first
+    clearError()
+    const isValid = await checkWord(word)
+    if (!isValid) return
 
     setIsLoading(true)
     setResult(null)
@@ -191,11 +199,11 @@ export function PronunciationTrainerAI({ currentUserId }: PronunciationTrainerAI
                 <Input
                   ref={inputRef}
                   value={searchWord}
-                  onChange={(e) => setSearchWord(e.target.value)}
+                  onChange={(e) => { setSearchWord(e.target.value); clearError() }}
                   onKeyDown={handleKeyDown}
                   placeholder="أدخل كلمة إنجليزية لتحليل نطقها..."
-                  className="pr-10 h-12 text-lg border-violet-200 dark:border-violet-800 focus-visible:ring-violet-500"
-                  disabled={isLoading}
+                  className={cn("pr-10 h-12 text-lg", spellError ? "border-rose-400 focus-visible:ring-rose-400" : "border-violet-200 dark:border-violet-800 focus-visible:ring-violet-500")}
+                  disabled={isLoading || isChecking}
                   dir="ltr"
                   style={{ textAlign: 'left' }}
                 />
@@ -221,6 +229,50 @@ export function PronunciationTrainerAI({ currentUserId }: PronunciationTrainerAI
                 </Button>
               )}
             </div>
+
+            {/* Spell Error Message */}
+            <AnimatePresence>
+              {spellError && !spellError.valid && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10, height: 0 }}
+                  animate={{ opacity: 1, y: 0, height: 'auto' }}
+                  exit={{ opacity: 0, y: -10, height: 0 }}
+                  className="mt-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800"
+                >
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-rose-700 dark:text-rose-400">
+                        خطأ إملائي! الكلمة &quot;{spellError.word}&quot; غير صحيحة
+                      </p>
+                      {spellError.suggestions && spellError.suggestions.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs text-rose-600 dark:text-rose-500 mb-1.5">هل كنت تقصد:</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {spellError.suggestions.slice(0, 5).map((suggestion) => (
+                              <Badge
+                                key={suggestion}
+                                className="cursor-pointer bg-white dark:bg-gray-800 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-700 hover:bg-rose-100 dark:hover:bg-rose-800/50 transition-colors"
+                                onClick={() => {
+                                  setSearchWord(suggestion)
+                                  clearError()
+                                  handleSearch(suggestion)
+                                }}
+                              >
+                                {suggestion}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={clearError} className="shrink-0 text-rose-400 hover:text-rose-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Quick Suggestion Words */}
             <div className="mt-4">

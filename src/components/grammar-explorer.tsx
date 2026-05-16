@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   BookOpen, Search, Sparkles, RefreshCw, Volume2,
   ChevronDown, ChevronUp, Lightbulb, GraduationCap, BookMarked,
-  Flame, Zap, Trophy
+  Flame, Zap, Trophy, AlertCircle, X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { useSpellCheck } from '@/hooks/use-spell-check'
 
 interface GrammarExample {
   en: string
@@ -69,12 +70,19 @@ export function GrammarExplorer({ currentUserId }: GrammarExplorerProps) {
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [hasSearched, setHasSearched] = useState(false)
 
+  const { spellError, isChecking, checkWord, clearError } = useSpellCheck()
+
   const exploreGrammar = useCallback(async (searchWord?: string) => {
     const targetWord = searchWord || word.trim()
     if (!targetWord) {
       toast.error('الرجاء إدخال كلمة')
       return
     }
+
+    // Spell check first
+    clearError()
+    const isValid = await checkWord(targetWord)
+    if (!isValid) return
 
     setIsLoading(true)
     setHasSearched(true)
@@ -179,12 +187,12 @@ export function GrammarExplorer({ currentUserId }: GrammarExplorerProps) {
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input
                 value={word}
-                onChange={(e) => setWord(e.target.value)}
+                onChange={(e) => { setWord(e.target.value); clearError() }}
                 onKeyDown={(e) => e.key === 'Enter' && exploreGrammar()}
                 placeholder="أدخل كلمة بالإنجليزية... (مثل: go, take, make, have)"
-                className="pr-10 text-lg h-12"
+                className={cn("pr-10 text-lg h-12", spellError && "border-rose-400 focus-visible:ring-rose-400")}
                 dir="ltr"
-                disabled={isLoading}
+                disabled={isLoading || isChecking}
               />
             </div>
             <Button
@@ -202,6 +210,50 @@ export function GrammarExplorer({ currentUserId }: GrammarExplorerProps) {
               )}
             </Button>
           </div>
+
+          {/* Spell Error Message */}
+          <AnimatePresence>
+            {spellError && !spellError.valid && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, y: -10, height: 0 }}
+                className="mt-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800"
+              >
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-rose-700 dark:text-rose-400">
+                      خطأ إملائي! الكلمة &quot;{spellError.word}&quot; غير صحيحة
+                    </p>
+                    {spellError.suggestions && spellError.suggestions.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs text-rose-600 dark:text-rose-500 mb-1.5">هل كنت تقصد:</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {spellError.suggestions.slice(0, 5).map((suggestion) => (
+                            <Badge
+                              key={suggestion}
+                              className="cursor-pointer bg-white dark:bg-gray-800 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-700 hover:bg-rose-100 dark:hover:bg-rose-800/50 transition-colors"
+                              onClick={() => {
+                                setWord(suggestion)
+                                clearError()
+                                exploreGrammar(suggestion)
+                              }}
+                            >
+                              {suggestion}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <button onClick={clearError} className="shrink-0 text-rose-400 hover:text-rose-600">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Quick word suggestions */}
           <div className="flex flex-wrap gap-2 mt-3">
