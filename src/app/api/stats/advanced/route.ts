@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // GET - إحصائيات شاملة
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const period = searchParams.get('period') || 'week'; // week | month | year
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId مطلوب' },
-        { status: 400 }
-      );
-    }
+    const { searchParams } = new URL(request.url);
+    const period = searchParams.get('period') || 'week'; // week | month | year
 
     // تحديد نطاق التاريخ
     const now = new Date();

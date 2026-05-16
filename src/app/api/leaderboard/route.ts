@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-helpers'
 
 // GET - Get leaderboard
 export async function GET(request: NextRequest) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
     const period = searchParams.get('period') || 'weekly'
     const category = searchParams.get('category') || 'general'
     const limit = parseInt(searchParams.get('limit') || '50')
@@ -29,30 +33,28 @@ export async function GET(request: NextRequest) {
 
     // Get current user's rank
     let userRank = null
-    if (userId) {
-      const userEntry = await db.leaderboard.findUnique({
-        where: {
-          userId_period_category: {
-            userId,
-            period,
-            category
-          }
+    const userEntry = await db.leaderboard.findUnique({
+      where: {
+        userId_period_category: {
+          userId,
+          period,
+          category
         }
+      }
+    })
+    
+    if (userEntry) {
+      // Get surrounding entries
+      const surrounding = await db.leaderboard.findMany({
+        where: { period, category },
+        orderBy: { rank: 'asc' }
       })
       
-      if (userEntry) {
-        // Get surrounding entries
-        const surrounding = await db.leaderboard.findMany({
-          where: { period, category },
-          orderBy: { rank: 'asc' }
-        })
-        
-        const userIndex = surrounding.findIndex(e => e.userId === userId)
-        userRank = {
-          ...userEntry,
-          position: userIndex + 1,
-          total: surrounding.length
-        }
+      const userIndex = surrounding.findIndex(e => e.userId === userId)
+      userRank = {
+        ...userEntry,
+        position: userIndex + 1,
+        total: surrounding.length
       }
     }
 
@@ -77,11 +79,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, xpEarned, wordsLearned, streakDays } = body
+    const { xpEarned, wordsLearned, streakDays } = body
 
-    if (!userId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
-    }
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     const now = new Date()
     const periods = ['daily', 'weekly', 'monthly', 'all-time']

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-helpers'
 
 // GET - Get a single learning path with details
 export async function GET(
@@ -8,8 +9,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     const path = await db.learningPath.findUnique({
       where: { id },
@@ -17,9 +20,9 @@ export async function GET(
         lessons: {
           orderBy: { order: 'asc' }
         },
-        progress: userId ? {
+        progress: {
           where: { userId }
-        } : false
+        }
       }
     })
 
@@ -142,10 +145,14 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json()
-    const { lessonId, userId, status, progress, score } = body
+    const { lessonId, status, progress, score } = body
 
-    if (!lessonId || !userId) {
-      return NextResponse.json({ error: 'lessonId and userId are required' }, { status: 400 })
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
+    if (!lessonId) {
+      return NextResponse.json({ error: 'lessonId is required' }, { status: 400 })
     }
 
     const existingProgress = await db.learningProgress.findUnique({

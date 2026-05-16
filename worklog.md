@@ -152,3 +152,33 @@ Stage Summary:
 - All CRUD operations now properly verify ownership
 - No more data leakage across users
 - All broken API routes either fixed or return graceful 501
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Fix frequent session logout issue - users getting logged out periodically
+
+Work Log:
+- Investigated the entire authentication system (custom cookie-based, not NextAuth)
+- Found 4 root causes of frequent logouts:
+  1. Network errors immediately logged users out with no retry
+  2. No periodic session refresh - session only checked once on mount
+  3. Session cookie contained raw user ID with no signature (tamper-vulnerable)
+  4. No middleware - API routes accepted userId from client without verification
+- Fixed AuthContext.tsx: Added retry logic (3 retries with exponential backoff), periodic session refresh (5 min), visibility/focus/online event handlers, no logout on network errors
+- Created /src/lib/session.ts: HMAC-signed session tokens using Web Crypto API (Edge Runtime compatible)
+- Updated login/register routes to create signed session tokens
+- Updated session route to verify signed tokens
+- Created middleware.ts: Validates session cookie on every request, sets x-user-id header for API routes
+- Updated auth-helpers.ts: Added requireAuth() function that reads verified userId from middleware header
+- Updated ALL 30+ API routes to use requireAuth() instead of trusting client-side userId
+- Added SESSION_SECRET to .env file
+
+Stage Summary:
+- Session cookie is now signed with HMAC-SHA256 (tamper-proof)
+- Network errors no longer cause immediate logout (3 retries with backoff)
+- Session is refreshed every 5 minutes and on tab focus/visibility change
+- Middleware enforces authentication on all API routes
+- API routes now read userId from verified session (not client-provided)
+- Users with old unsigned cookies will need to login once (auto-upgrade)
+- SESSION_SECRET must be set as environment variable on Vercel

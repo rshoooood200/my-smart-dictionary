@@ -1,22 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { verifyWordOwnership } from '@/lib/auth-helpers';
+import { requireAuth, verifyWordOwnership } from '@/lib/auth-helpers';
 
 // GET - جلب كلمات للمراجعة
 export async function GET(request: NextRequest) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
     const mode = searchParams.get('mode') || 'flashcard';
     const count = parseInt(searchParams.get('count') || '10');
     const category = searchParams.get('category') || '';
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId مطلوب' },
-        { status: 400 }
-      );
-    }
 
     const where: Record<string, unknown> = { userId };
 
@@ -70,18 +66,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { wordId, isCorrect, userId } = body;
+    const { wordId, isCorrect } = body;
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     if (!wordId) {
       return NextResponse.json(
         { success: false, error: 'معرف الكلمة مطلوب' },
-        { status: 400 }
-      );
-    }
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId مطلوب' },
         { status: 400 }
       );
     }
@@ -139,14 +132,11 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, sessionId, totalWords, correctCount, wrongCount, duration, userId } = body;
+    const { action, sessionId, totalWords, correctCount, wrongCount, duration } = body;
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId مطلوب' },
-        { status: 400 }
-      );
-    }
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     if (action === 'start') {
       const session = await db.reviewSession.create({

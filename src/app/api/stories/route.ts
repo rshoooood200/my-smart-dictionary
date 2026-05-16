@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { sanitizeText } from '@/lib/auth-helpers';
+import { requireAuth, sanitizeText } from '@/lib/auth-helpers';
 
 /**
  * دالة تنظيف المحتوى من أي بيانات فاسدة أو خطيرة
@@ -58,18 +58,12 @@ function cleanStoryContent(text: string): string {
 // GET - جلب جميع القصص
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const level = searchParams.get('level');
-    const isRead = searchParams.get('isRead');
-    const isFavorite = searchParams.get('isFavorite');
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId مطلوب' },
-        { status: 400 }
-      );
-    }
+    const { searchParams } = new URL(request.url);
+    const level = searchParams.get('level');
 
     const where: Record<string, unknown> = { userId };
 
@@ -118,15 +112,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { 
       title, titleAr, content, contentAr, level, 
-      readingTime, wordCount, userId, wordIds, isAiGenerated 
+      readingTime, wordCount, wordIds, isAiGenerated 
     } = body;
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId مطلوب' },
-        { status: 400 }
-      );
-    }
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     if (!title || !content) {
       return NextResponse.json(

@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { callGemini } from '@/lib/gemini';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // GET - التحقق من وجود مفتاح Gemini
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId مطلوب' },
-        { status: 400 }
-      );
-    }
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     // البحث عن إعدادات Gemini للمستخدم
     const config = await db.geminiConfig.findUnique({
@@ -38,13 +33,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, apiKey } = body;
+    const { apiKey } = body;
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     console.log('Saving Gemini config:', { userId, keyPrefix: apiKey?.slice(0, 6) });
 
-    if (!userId || !apiKey) {
+    if (!apiKey) {
       return NextResponse.json(
-        { success: false, error: 'userId و apiKey مطلوبان' },
+        { success: false, error: 'apiKey مطلوب' },
         { status: 400 }
       );
     }
@@ -88,15 +87,9 @@ export async function POST(request: NextRequest) {
 // DELETE - حذف مفتاح Gemini
 export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId مطلوب' },
-        { status: 400 }
-      );
-    }
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     await db.geminiConfig.delete({
       where: { userId }

@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callGeminiJSON } from '@/lib/ai'
+import { requireAuth } from '@/lib/auth-helpers'
 
 // POST - Generate Smart Tests
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { 
-      userId, 
       weakWords, 
       testType, 
       difficulty,
       count,
       category
     } = body
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     let prompt = ''
 

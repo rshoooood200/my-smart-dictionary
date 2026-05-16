@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { verifyNoteOwnership, unauthorizedResponse } from '@/lib/auth-helpers'
+import { requireAuth, verifyNoteOwnership, unauthorizedResponse } from '@/lib/auth-helpers'
 
 // GET /api/notes/[id] - Get a single note
 export async function GET(
@@ -9,8 +9,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     const note = await db.note.findUnique({
       where: { id }
@@ -24,7 +26,7 @@ export async function GET(
     }
 
     // التحقق من الملكية
-    if (userId && note.userId !== userId) {
+    if (note.userId !== userId) {
       return unauthorizedResponse()
     }
 
@@ -46,7 +48,11 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { userId, title, content, color, isPinned, isArchived, tags } = body
+    const { title, content, color, isPinned, isArchived, tags } = body
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     // التحقق من الملكية
     const existingNote = await verifyNoteOwnership(id, userId)
@@ -84,11 +90,13 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     // التحقق من الملكية
-    const existingNote = await verifyNoteOwnership(id, userId || '')
+    const existingNote = await verifyNoteOwnership(id, userId)
     if (!existingNote) {
       return unauthorizedResponse()
     }

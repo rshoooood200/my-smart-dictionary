@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // GET - تصدير جميع البيانات
 export async function GET(request: NextRequest) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { searchParams } = new URL(request.url);
     const format = searchParams.get('format') || 'json';
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'معرف المستخدم مطلوب' },
-        { status: 400 }
-      );
-    }
 
     // جلب جميع بيانات المستخدم
     const [words, categories, notes, stories, customLists] = await Promise.all([

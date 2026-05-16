@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-helpers'
 
 // Save game result and award XP
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { score, total, correct, wrong, xpEarned, timeSpent, gameType, userId } = body
+    const { score, total, correct, wrong, xpEarned, timeSpent, gameType } = body
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'معرف المستخدم مطلوب' },
-        { status: 400 }
-      )
-    }
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     // Update user XP using User model
     const user = await db.user.findUnique({

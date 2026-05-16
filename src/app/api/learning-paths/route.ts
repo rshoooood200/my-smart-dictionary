@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-helpers'
 
 // GET - Get all learning paths
 export async function GET(request: NextRequest) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
     const publicOnly = searchParams.get('public') === 'true'
     const templates = searchParams.get('templates') === 'true'
 
@@ -15,7 +19,7 @@ export async function GET(request: NextRequest) {
       where.isPublic = true
     } else if (templates) {
       where.isTemplate = true
-    } else if (userId) {
+    } else {
       where.OR = [
         { userId },
         { isPublic: true }
@@ -28,9 +32,9 @@ export async function GET(request: NextRequest) {
         lessons: {
           orderBy: { order: 'asc' }
         },
-        progress: userId ? {
+        progress: {
           where: { userId }
-        } : false
+        },
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -62,10 +66,14 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { 
-      userId, title, titleAr, description, descriptionAr, 
+      title, titleAr, description, descriptionAr, 
       level, category, icon, color, isPublic, isTemplate, 
       estimatedDays, lessons 
     } = body
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     if (!title) {
       return NextResponse.json({ error: 'title is required' }, { status: 400 })

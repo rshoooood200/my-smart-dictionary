@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // POST - استيراد جميع البيانات
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { userId, data } = body;
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'معرف المستخدم مطلوب' },
-        { status: 400 }
-      );
-    }
+    const body = await request.json();
+    const { data } = body;
 
     if (!data || typeof data !== 'object') {
       return NextResponse.json(

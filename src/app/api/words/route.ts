@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // GET - جلب جميع الكلمات مع الفلترة
 export async function GET(request: NextRequest) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
     const search = searchParams.get('search') || '';
     const category = searchParams.get('category') || '';
     const level = searchParams.get('level') || '';
@@ -13,13 +17,6 @@ export async function GET(request: NextRequest) {
     const isFavorite = searchParams.get('isFavorite');
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const order = searchParams.get('order') || 'desc';
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId مطلوب' },
-        { status: 400 }
-      );
-    }
 
     const where: Record<string, unknown> = { userId };
     
@@ -97,22 +94,19 @@ export async function GET(request: NextRequest) {
 // POST - إضافة كلمة جديدة
 export async function POST(request: NextRequest) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const body = await request.json();
     const { 
       word, translation, pronunciation, definition, 
       partOfSpeech, level, categoryId, sentences, 
-      synonyms, antonyms, usageNotes, userId,
+      synonyms, antonyms, usageNotes,
       // حقول جديدة
       verbForms, nounForms, adjectiveForms,
       examples, arabicMeaning, context
     } = body;
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId مطلوب' },
-        { status: 400 }
-      );
-    }
 
     // التحقق من البيانات المطلوبة
     if (!word || !word.trim()) {

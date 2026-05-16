@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-helpers'
 
 // GET - Get notifications for a user
 export async function GET(request: NextRequest) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
     const unreadOnly = searchParams.get('unreadOnly') === 'true'
     const type = searchParams.get('type')
     const limit = parseInt(searchParams.get('limit') || '50')
-
-    if (!userId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
-    }
 
     const where: Record<string, unknown> = { userId }
     if (unreadOnly) where.isRead = false
@@ -47,12 +47,16 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { 
-      userId, type, title, titleAr, message, messageAr,
+      type, title, titleAr, message, messageAr,
       icon, actionType, actionId, priority, scheduledFor, expiresAt
     } = body
 
-    if (!userId || !title || !message) {
-      return NextResponse.json({ error: 'userId, title, and message are required' }, { status: 400 })
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
+    if (!title || !message) {
+      return NextResponse.json({ error: 'title and message are required' }, { status: 400 })
     }
 
     const notification = await db.notification.create({

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // تعريف الإنجازات
 const ACHIEVEMENTS = [
@@ -67,15 +68,9 @@ async function ensureAchievementsExist() {
 // GET - جلب ملف المستخدم والإنجازات
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'معرف المستخدم مطلوب' },
-        { status: 400 }
-      );
-    }
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
     
     await ensureAchievementsExist();
     
@@ -193,14 +188,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, value = 1, userId } = body;
+    const { action, value = 1 } = body;
     
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'معرف المستخدم مطلوب' },
-        { status: 400 }
-      );
-    }
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
     
     await ensureAchievementsExist();
     

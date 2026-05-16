@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // GET - جلب جميع التصنيفات لمستخدم معين
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId مطلوب' },
-        { status: 400 }
-      );
-    }
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     const categories = await db.category.findMany({
       where: { userId },
@@ -39,15 +34,12 @@ export async function GET(request: NextRequest) {
 // POST - إضافة تصنيف جديد
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { name, nameAr, color, icon, userId } = body;
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId مطلوب' },
-        { status: 400 }
-      );
-    }
+    const body = await request.json();
+    const { name, nameAr, color, icon } = body;
 
     if (!name || !name.trim()) {
       return NextResponse.json(

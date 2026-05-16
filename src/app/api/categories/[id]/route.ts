@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { verifyCategoryOwnership, unauthorizedResponse } from '@/lib/auth-helpers'
+import { requireAuth, verifyCategoryOwnership, unauthorizedResponse } from '@/lib/auth-helpers'
 
 // GET /api/categories/[id] - Get a single category
 export async function GET(
@@ -9,8 +9,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     const category = await db.category.findUnique({
       where: { id },
@@ -29,7 +31,7 @@ export async function GET(
     }
 
     // التحقق من الملكية
-    if (userId && category.userId !== userId) {
+    if (category.userId !== userId) {
       return unauthorizedResponse()
     }
 
@@ -51,7 +53,11 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { userId, name, nameAr, color, icon } = body
+    const { name, nameAr, color, icon } = body
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     // التحقق من الملكية
     const existingCategory = await verifyCategoryOwnership(id, userId)
@@ -87,11 +93,13 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     // التحقق من الملكية
-    const existingCategory = await verifyCategoryOwnership(id, userId || '')
+    const existingCategory = await verifyCategoryOwnership(id, userId)
     if (!existingCategory) {
       return unauthorizedResponse()
     }

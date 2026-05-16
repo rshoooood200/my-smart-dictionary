@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-helpers'
 
 // GET /api/notes - Get all notes for a user
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId is required' },
-        { status: 400 }
-      )
-    }
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     const notes = await db.note.findMany({
       where: {
@@ -38,11 +33,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, title, content, color, tags } = body
+    const { title, content, color, tags } = body
 
-    if (!userId || !title || !content) {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
+    if (!title || !content) {
       return NextResponse.json(
-        { success: false, error: 'userId, title, and content are required' },
+        { success: false, error: 'title and content are required' },
         { status: 400 }
       )
     }

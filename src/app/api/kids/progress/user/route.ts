@@ -1,33 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-helpers'
 
 // GET - Fetch user's kids progress
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const userId = searchParams.get('userId')
-
-    if (!userId) {
-      // Return default progress for non-logged in users
-      return NextResponse.json({
-        xp: 0,
-        level: 1,
-        currentStreak: 0,
-        longestStreak: 0,
-        coins: 0,
-        gems: 0,
-        totalVideosWatched: 0,
-        totalQuizzesCompleted: 0,
-        totalGamesPlayed: 0,
-        totalLessonsRead: 0,
-        totalFlashcardsViewed: 0,
-        totalCorrectAnswers: 0,
-        totalWrongAnswers: 0,
-        totalTimeSpent: 0,
-        lastActiveDate: null,
-        isNew: true
-      })
-    }
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     let progress = await db.kidsProgress.findUnique({
       where: { userId }
@@ -97,11 +77,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, action, data } = body
+    const { action, data } = body
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
-    }
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     let progress = await db.kidsProgress.findUnique({
       where: { userId }

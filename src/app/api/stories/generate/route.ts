@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callGeminiJSON } from '@/lib/ai';
 import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
 
 interface StoryResponse {
   title: string;
@@ -22,7 +23,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      userId,
       topic,
       level = 'beginner',
       wordIds = [],
@@ -30,12 +30,9 @@ export async function POST(request: NextRequest) {
       includeQuiz = true
     } = body;
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId مطلوب' },
-        { status: 400 }
-      );
-    }
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     // جلب الكلمات المحفوظة للمستخدم
     let savedWords: { id: string; word: string; translation: string }[] = [];

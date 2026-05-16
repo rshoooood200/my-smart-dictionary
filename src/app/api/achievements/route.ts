@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-helpers'
 
 // Default achievements to seed
 const defaultAchievements = [
@@ -40,8 +41,12 @@ const defaultAchievements = [
 // GET - Get achievements for a user
 export async function GET(request: NextRequest) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    // No userId from searchParams - using requireAuth
 
     // Ensure achievements exist
     const existingAchievements = await db.achievement.findMany()
@@ -58,12 +63,10 @@ export async function GET(request: NextRequest) {
 
     // Get user's unlocked achievements
     let userAchievements: { achievementId: string }[] = []
-    if (userId) {
-      userAchievements = await db.userAchievement.findMany({
-        where: { userId },
-        select: { achievementId: true }
-      })
-    }
+    userAchievements = await db.userAchievement.findMany({
+      where: { userId },
+      select: { achievementId: true }
+    })
 
     const unlockedIds = new Set(userAchievements.map(ua => ua.achievementId))
 
@@ -79,7 +82,8 @@ export async function GET(request: NextRequest) {
       quizzesPassed: 0
     }
 
-    if (userId) {
+    // userId is always present due to requireAuth
+    {
       const words = await db.word.findMany({ where: { userId } })
       const reviewSessions = await db.reviewSession.findMany({ where: { userId } })
       const user = await db.user.findUnique({ where: { id: userId } })
@@ -151,10 +155,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, achievementKey } = body
+    const { achievementKey } = body
 
-    if (!userId || !achievementKey) {
-      return NextResponse.json({ error: 'userId and achievementKey are required' }, { status: 400 })
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
+    if (!achievementKey) {
+      return NextResponse.json({ error: 'achievementKey is required' }, { status: 400 })
     }
 
     const achievement = await db.achievement.findUnique({

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { verifyWordOwnership, unauthorizedResponse } from '@/lib/auth-helpers';
+import { requireAuth, verifyWordOwnership, unauthorizedResponse } from '@/lib/auth-helpers';
 
 // GET - جلب كلمة واحدة
 export async function GET(
@@ -9,8 +9,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     const word = await db.word.findUnique({
       where: { id },
@@ -28,7 +30,7 @@ export async function GET(
     }
 
     // التحقق من الملكية
-    if (userId && word.userId !== userId) {
+    if (word.userId !== userId) {
       return unauthorizedResponse();
     }
 
@@ -58,7 +60,6 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     const { 
-      userId,
       word, translation, pronunciation, definition, 
       partOfSpeech, level, categoryId, isLearned, isFavorite,
       synonyms, antonyms, usageNotes, reviewCount, correctCount,
@@ -66,6 +67,10 @@ export async function PUT(
       // SM-2 fields
       easeFactor, interval, repetitions
     } = body;
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     // التحقق من الملكية
     const existingWord = await verifyWordOwnership(id, userId);
@@ -127,11 +132,13 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     // التحقق من الملكية
-    const existingWord = await verifyWordOwnership(id, userId || '');
+    const existingWord = await verifyWordOwnership(id, userId);
     if (!existingWord) {
       return unauthorizedResponse();
     }

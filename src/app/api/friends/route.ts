@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-helpers'
 
 // GET - Get friends and friend requests
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-    const type = searchParams.get('type') || 'friends'
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
-    if (!userId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
-    }
+    const { searchParams } = new URL(request.url)
+    const type = searchParams.get('type') || 'friends'
 
     if (type === 'friends') {
       // Get accepted friends
@@ -140,12 +140,12 @@ export async function GET(request: NextRequest) {
 // POST - Send friend request or respond to request
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { userId, type, data } = body
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
-    if (!userId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
-    }
+    const body = await request.json()
+    const { type, data } = body
 
     if (type === 'send-request') {
       const { friendId } = data

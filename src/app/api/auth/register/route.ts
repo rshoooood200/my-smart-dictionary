@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { hash } from 'bcryptjs';
+import { createSessionToken } from '@/lib/session';
 
 // Force recompile
 export const dynamic = 'force-dynamic';
@@ -59,6 +60,9 @@ export async function POST(request: NextRequest) {
       ],
     });
 
+    // Create signed session token
+    const sessionToken = await createSessionToken(user.id);
+
     // Return user without password
     const response = NextResponse.json({
       success: true,
@@ -74,8 +78,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Set session cookie
-    response.cookies.set('session', user.id, {
+    // Set session cookie with signed token
+    response.cookies.set('session', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

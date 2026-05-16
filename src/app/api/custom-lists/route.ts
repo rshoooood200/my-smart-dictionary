@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-helpers'
 
 // GET - Get all custom lists for a user
 export async function GET(request: NextRequest) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
     const publicOnly = searchParams.get('public') === 'true'
     const templates = searchParams.get('templates') === 'true'
-
-    if (!userId && !publicOnly && !templates) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
-    }
 
     const where: Record<string, unknown> = {}
     
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       where.isPublic = true
     } else if (templates) {
       where.isTemplate = true
-    } else if (userId) {
+    } else {
       where.userId = userId
     }
 
@@ -54,10 +54,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, name, nameAr, description, color, icon, isPublic, isTemplate, tags, wordIds } = body
+    const { name, nameAr, description, color, icon, isPublic, isTemplate, tags, wordIds } = body
 
-    if (!userId || !name) {
-      return NextResponse.json({ error: 'userId and name are required' }, { status: 400 })
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
+    if (!name) {
+      return NextResponse.json({ error: 'name is required' }, { status: 400 })
     }
 
     // Create list with words

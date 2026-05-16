@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callGeminiJSON } from '@/lib/ai';
 import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { word, userId } = body;
+    const { word } = body;
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     if (!word || typeof word !== 'string') {
       return NextResponse.json({ success: false, error: 'Word is required' }, { status: 400 });
@@ -15,18 +20,16 @@ export async function POST(request: NextRequest) {
 
     // Check if user has a Gemini API key stored
     let userApiKey: string | undefined;
-    if (userId) {
-      try {
-        const config = await db.geminiConfig.findUnique({
-          where: { userId }
-        });
-        if (config?.apiKey) {
-          userApiKey = config.apiKey;
-          console.log('[Word-Info] Using user\'s Gemini API key');
-        }
-      } catch (dbError) {
-        console.log('[Word-Info] Could not fetch user API key, using server key');
+    try {
+      const config = await db.geminiConfig.findUnique({
+        where: { userId }
+      });
+      if (config?.apiKey) {
+        userApiKey = config.apiKey;
+        console.log('[Word-Info] Using user\'s Gemini API key');
       }
+    } catch (dbError) {
+      console.log('[Word-Info] Could not fetch user API key, using server key');
     }
 
     // Enhanced prompt with word forms

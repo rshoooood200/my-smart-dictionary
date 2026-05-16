@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callGemini } from '@/lib/ai'
+import { requireAuth } from '@/lib/auth-helpers'
 
 // POST - AI Learning Chat
 export async function POST(request: NextRequest) {
@@ -8,12 +9,15 @@ export async function POST(request: NextRequest) {
     const { 
       message, 
       context, 
-      userId, 
       conversationHistory,
       learningLevel,
       weakWords,
       strongWords
     } = body
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     if (!message) {
       return NextResponse.json({ error: 'message is required' }, { status: 400 })

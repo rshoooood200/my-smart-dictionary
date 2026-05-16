@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
 
 // GET - جلب الإحصائيات
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const period = searchParams.get('period') || 'all'; // all, week, month
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId مطلوب' },
-        { status: 400 }
-      );
-    }
+    const { searchParams } = new URL(request.url);
+    const period = searchParams.get('period') || 'all'; // all, week, month
 
     // إجمالي الكلمات
     const totalWords = await db.word.count({

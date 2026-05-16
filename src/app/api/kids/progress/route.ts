@@ -1,25 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-helpers'
 
 // GET - Fetch user progress
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const userId = searchParams.get('userId')
-
-    if (!userId) {
-      // Return default progress for anonymous users
-      return NextResponse.json({
-        xp: 0,
-        level: 1,
-        streak: 0,
-        totalQuizzes: 0,
-        totalGames: 0,
-        totalVideos: 0,
-        achievements: [],
-        coins: 0
-      })
-    }
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     // Get user's quiz attempts
     const quizAttempts = await db.kidsQuizAttempt.findMany({
@@ -72,13 +60,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type, userId, data } = body
+    const { type, data } = body
+
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     if (type === 'quiz') {
       const attempt = await db.kidsQuizAttempt.create({
         data: {
           quizId: data.quizId,
-          userId: userId || null,
+          userId,
           score: data.score,
           totalPoints: data.totalPoints,
           correctCount: data.correctCount,
@@ -94,7 +86,7 @@ export async function POST(request: NextRequest) {
       const score = await db.kidsGameScore.create({
         data: {
           gameId: data.gameId,
-          userId: userId || null,
+          userId,
           score: data.score,
           level: data.level || 1,
           timeSpent: data.timeSpent

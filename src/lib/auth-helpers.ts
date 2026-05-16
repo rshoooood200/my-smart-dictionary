@@ -1,5 +1,41 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db } from './db'
+
+/**
+ * استخراج معرّف المستخدم من الجلسة الموثوقة
+ * يقرأ من x-user-id header الذي يضعه الـ middleware بعد التحقق من كوكي الجلسة
+ * هذا يضمن أن المستخدم لا يمكنه تزوير معرّف مستخدم آخر
+ */
+export function getAuthenticatedUserId(request: NextRequest): string | null {
+  // The middleware verifies the session cookie and sets this header
+  const headerUserId = request.headers.get('x-user-id');
+  if (headerUserId) return headerUserId;
+
+  // No valid session found
+  return null;
+}
+
+/**
+ * استخراج معرّف المستخدم مع إرجاع استجابة خطأ إذا لم يكن موجوداً
+ * يستخدم في بداية كل API route
+ * 
+ * الاستخدام:
+ * const auth = requireAuth(request);
+ * if (auth instanceof NextResponse) return auth;
+ * const { userId } = auth;
+ */
+export function requireAuth(request: NextRequest): { userId: string } | NextResponse {
+  const userId = getAuthenticatedUserId(request);
+  
+  if (!userId) {
+    return NextResponse.json(
+      { success: false, error: 'يرجى تسجيل الدخول أولاً' },
+      { status: 401 }
+    );
+  }
+
+  return { userId };
+}
 
 /**
  * التحقق من ملكية المستخدم لكلمة معينة
@@ -17,7 +53,7 @@ export async function verifyWordOwnership(wordId: string, userId: string | null 
  * التحقق من ملكية المستخدم لتصنيف معين
  */
 export async function verifyCategoryOwnership(categoryId: string, userId: string | null | undefined) {
-  if (!userId) return null
+  if (!categoryId) return null
   const category = await db.category.findFirst({
     where: { id: categoryId, userId }
   })
@@ -28,7 +64,7 @@ export async function verifyCategoryOwnership(categoryId: string, userId: string
  * التحقق من ملكية المستخدم لملاحظة معينة
  */
 export async function verifyNoteOwnership(noteId: string, userId: string | null | undefined) {
-  if (!userId) return null
+  if (!noteId) return null
   const note = await db.note.findFirst({
     where: { id: noteId, userId }
   })
@@ -39,7 +75,7 @@ export async function verifyNoteOwnership(noteId: string, userId: string | null 
  * التحقق من ملكية المستخدم لقصة معينة
  */
 export async function verifyStoryOwnership(storyId: string, userId: string | null | undefined) {
-  if (!userId) return null
+  if (!storyId) return null
   const story = await db.story.findFirst({
     where: { id: storyId, userId }
   })
