@@ -14,29 +14,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update user stats
-    const userStats = await db.userStats.findUnique({
-      where: { userId }
+    // Update user XP using User model
+    const user = await db.user.findUnique({
+      where: { id: userId }
     })
     
-    if (!userStats) {
-      // Create stats if not exists
-      await db.userStats.create({
-        data: {
-          userId,
-          totalXP: xpEarned,
-          totalReviews: correct,
-        }
-      })
-    } else {
-      await db.userStats.update({
-        where: { userId },
-        data: {
-          totalXP: { increment: xpEarned },
-          totalReviews: { increment: correct },
-        }
-      })
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'المستخدم غير موجود' },
+        { status: 404 }
+      )
     }
+
+    await db.user.update({
+      where: { id: userId },
+      data: {
+        xp: { increment: xpEarned || 0 },
+      }
+    })
 
     // Update daily stats
     const today = new Date()
@@ -55,13 +50,11 @@ export async function POST(request: NextRequest) {
         wordsReviewed: correct,
         correctAnswers: correct,
         wrongAnswers: wrong,
-        xpEarned: xpEarned,
       },
       update: {
         wordsReviewed: { increment: correct },
         correctAnswers: { increment: correct },
         wrongAnswers: { increment: wrong },
-        xpEarned: { increment: xpEarned },
       }
     })
 
@@ -74,7 +67,6 @@ export async function POST(request: NextRequest) {
         wrongCount: wrong,
         duration: timeSpent,
         sessionType: gameType || 'game',
-        xpEarned: xpEarned,
       }
     })
 
@@ -104,7 +96,7 @@ async function checkAchievements(userId: string, correct: number, total: number)
   const user = await db.user.findUnique({
     where: { id: userId },
     include: {
-      achievements: {
+      userAchievements: {
         include: {
           achievement: true
         }
@@ -114,7 +106,7 @@ async function checkAchievements(userId: string, correct: number, total: number)
 
   if (!user) return earnedAchievements
 
-  const earnedKeys = user.achievements.map(a => a.achievement.key)
+  const earnedKeys = user.userAchievements.map(a => a.achievement.key)
 
   // Check for first game achievement
   if (!earnedKeys.includes('first_game')) {
@@ -127,10 +119,9 @@ async function checkAchievements(userId: string, correct: number, total: number)
         data: {
           userId,
           achievementId: achievement.id,
-          xpEarned: achievement.xpReward
         }
       })
-      earnedAchievements.push(achievement.nameAr)
+      earnedAchievements.push(achievement.nameAr || achievement.name)
     }
   }
 
@@ -145,10 +136,9 @@ async function checkAchievements(userId: string, correct: number, total: number)
         data: {
           userId,
           achievementId: achievement.id,
-          xpEarned: achievement.xpReward
         }
       })
-      earnedAchievements.push(achievement.nameAr)
+      earnedAchievements.push(achievement.nameAr || achievement.name)
     }
   }
 

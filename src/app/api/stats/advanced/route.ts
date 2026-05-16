@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       learnedWords,
       favoriteWords,
       categories,
-      dailyActivities,
+      dailyAnalytics,
       reviewSessions,
       wordsByLevel,
       wordsByCategory,
@@ -53,8 +53,6 @@ export async function GET(request: NextRequest) {
           level: true,
           currentStreak: true,
           longestStreak: true,
-          totalStudyTime: true,
-          wordsMastered: true,
           achievements: true
         }
       }),
@@ -82,8 +80,8 @@ export async function GET(request: NextRequest) {
         }
       }),
       
-      // النشاط اليومي
-      db.dailyActivity.findMany({
+      // التحليلات اليومية (using dailyAnalytics instead of dailyActivity)
+      db.dailyAnalytics.findMany({
         where: {
           userId,
           date: { gte: startDate }
@@ -142,37 +140,37 @@ export async function GET(request: NextRequest) {
       })
     ]);
 
-    // حساب الإحصائيات المشتقة
-    const totalReviews = dailyActivities.reduce((sum, a) => sum + a.wordsReviewed, 0);
-    const totalCorrect = dailyActivities.reduce((sum, a) => sum + a.correctAnswers, 0);
-    const totalWrong = dailyActivities.reduce((sum, a) => sum + a.wrongAnswers, 0);
-    const totalStudyTime = dailyActivities.reduce((sum, a) => sum + a.studyTime, 0);
+    // حساب الإحصائيات المشتقة (using dailyAnalytics field names)
+    const totalReviews = dailyAnalytics.reduce((sum, a) => sum + a.wordsReviewed, 0);
+    const totalCorrect = dailyAnalytics.reduce((sum, a) => sum + a.correctAnswers, 0);
+    const totalWrong = dailyAnalytics.reduce((sum, a) => sum + a.wrongAnswers, 0);
+    const totalStudyTime = dailyAnalytics.reduce((sum, a) => sum + a.totalStudyTime, 0);
     const accuracy = (totalCorrect + totalWrong) > 0 
       ? Math.round((totalCorrect / (totalCorrect + totalWrong)) * 100) 
       : 0;
 
     // حساب متوسط يومي
-    const daysWithActivity = dailyActivities.filter(a => a.wordsReviewed > 0).length;
+    const daysWithActivity = dailyAnalytics.filter(a => a.wordsReviewed > 0).length;
     const avgWordsPerDay = daysWithActivity > 0 ? Math.round(totalReviews / daysWithActivity) : 0;
 
     // حساب التقدم الأسبوعي
-    const weeklyProgress = dailyActivities.slice(-7).map(a => ({
+    const weeklyProgress = dailyAnalytics.slice(-7).map(a => ({
       date: a.date.toISOString().split('T')[0],
       wordsReviewed: a.wordsReviewed,
       correctAnswers: a.correctAnswers,
       wrongAnswers: a.wrongAnswers,
-      studyTime: a.studyTime,
+      studyTime: a.totalStudyTime,
       xpEarned: a.xpEarned
     }));
 
     // تحضير بيانات الرسوم البيانية
     const chartData = {
       // نشاط الأيام
-      dailyActivity: dailyActivities.map(a => ({
+      dailyActivity: dailyAnalytics.map(a => ({
         date: a.date.toISOString().split('T')[0],
-        wordsAdded: a.wordsAdded,
+        wordsAdded: a.wordsLearned,
         wordsReviewed: a.wordsReviewed,
-        studyTime: a.studyTime
+        studyTime: a.totalStudyTime
       })),
       
       // توزيع الكلمات حسب المستوى
@@ -206,14 +204,14 @@ export async function GET(request: NextRequest) {
     };
 
     // حساب heatmap للنشاط
-    const heatmapData = generateHeatmapData(dailyActivities);
+    const heatmapData = generateHeatmapData(dailyAnalytics);
 
     // حساب الأهداف
     const goals = {
       daily: {
         target: 10,
-        current: dailyActivities[dailyActivities.length - 1]?.wordsReviewed || 0,
-        achieved: (dailyActivities[dailyActivities.length - 1]?.wordsReviewed || 0) >= 10
+        current: dailyAnalytics[dailyAnalytics.length - 1]?.wordsReviewed || 0,
+        achieved: (dailyAnalytics[dailyAnalytics.length - 1]?.wordsReviewed || 0) >= 10
       },
       weekly: {
         target: 50,
@@ -243,8 +241,7 @@ export async function GET(request: NextRequest) {
           currentStreak: user?.currentStreak || 0,
           longestStreak: user?.longestStreak || 0,
           xp: user?.xp || 0,
-          level: user?.level || 1,
-          wordsMastered: user?.wordsMastered || 0
+          level: user?.level || 1
         },
         categories: categories.map(c => ({
           id: c.id,

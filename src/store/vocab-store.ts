@@ -268,18 +268,19 @@ export const useVocabStore = create<VocabStore>((set, get) => ({
     
     set(state => {
       const users = state.users.filter(u => u.id !== userId)
-      const currentUserId = state.currentUserId === userId ? null : state.currentUserId
+      const wasCurrentUser = state.currentUserId === userId
       
-      if (state.currentUserId === userId) {
+      if (wasCurrentUser) {
         localStorage.removeItem('currentUserId')
       }
       
       return { 
         users, 
-        currentUserId,
-        words: currentUserId ? state.words : [],
-        categories: currentUserId ? state.categories : [],
-        stats: currentUserId ? state.stats : null
+        currentUserId: wasCurrentUser ? null : state.currentUserId,
+        words: wasCurrentUser ? [] : state.words,
+        categories: wasCurrentUser ? [] : state.categories,
+        notes: wasCurrentUser ? [] : state.notes,
+        stats: wasCurrentUser ? null : state.stats
       }
     })
   },
@@ -327,10 +328,11 @@ export const useVocabStore = create<VocabStore>((set, get) => ({
   },
   
   updateWord: async (wordId, updates) => {
+    const { currentUserId } = get()
     const res = await fetch(`/api/words/${wordId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
+      body: JSON.stringify({ ...updates, userId: currentUserId }),
     })
     const data = await res.json()
     
@@ -345,11 +347,14 @@ export const useVocabStore = create<VocabStore>((set, get) => ({
   },
   
   deleteWord: async (wordId) => {
-    await fetch(`/api/words/${wordId}`, { method: 'DELETE' })
-    set(state => ({
-      words: state.words.filter(w => w.id !== wordId)
-    }))
-    get().loadStats()
+    const { currentUserId } = get()
+    const res = await fetch(`/api/words/${wordId}?userId=${currentUserId}`, { method: 'DELETE' })
+    if (res.ok) {
+      set(state => ({
+        words: state.words.filter(w => w.id !== wordId)
+      }))
+      get().loadStats()
+    }
   },
   
   toggleFavorite: async (wordId) => {
@@ -405,10 +410,11 @@ export const useVocabStore = create<VocabStore>((set, get) => ({
   
   updateCategory: async (categoryId, updates) => {
     try {
+      const { currentUserId } = get()
       const res = await fetch(`/api/categories/${categoryId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
+        body: JSON.stringify({ ...updates, userId: currentUserId }),
       })
       const data = await res.json()
       
@@ -438,7 +444,8 @@ export const useVocabStore = create<VocabStore>((set, get) => ({
   
   deleteCategory: async (categoryId) => {
     try {
-      const res = await fetch(`/api/categories/${categoryId}`, { method: 'DELETE' })
+      const { currentUserId } = get()
+      const res = await fetch(`/api/categories/${categoryId}?userId=${currentUserId}`, { method: 'DELETE' })
       const data = await res.json()
       
       if (!res.ok) {
@@ -484,24 +491,25 @@ export const useVocabStore = create<VocabStore>((set, get) => ({
     }
   },
   
-  addNote: async (noteData) => {
+  addNote: async (noteInput) => {
     const { currentUserId } = get()
     if (!currentUserId) throw new Error('No user selected')
     
     const res = await fetch('/api/notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...noteData, userId: currentUserId }),
+      body: JSON.stringify({ ...noteInput, userId: currentUserId }),
     })
-    const data = await res.json()
+    const result = await res.json()
     
     if (!res.ok) {
-      throw new Error(data.error || 'Failed to add note')
+      throw new Error(result.error || 'Failed to add note')
     }
     
+    const noteData = result.data || result
     const note = {
-      ...data,
-      tags: JSON.parse(data.tags || '[]')
+      ...noteData,
+      tags: JSON.parse(noteData.tags || '[]')
     }
     
     set(state => ({ notes: [note, ...state.notes] }))
@@ -509,20 +517,22 @@ export const useVocabStore = create<VocabStore>((set, get) => ({
   },
   
   updateNote: async (noteId, updates) => {
+    const { currentUserId } = get()
     const res = await fetch(`/api/notes/${noteId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
+      body: JSON.stringify({ ...updates, userId: currentUserId }),
     })
-    const data = await res.json()
+    const result = await res.json()
     
     if (!res.ok) {
-      throw new Error(data.error || 'Failed to update note')
+      throw new Error(result.error || 'Failed to update note')
     }
     
+    const noteData = result.data || result
     const note = {
-      ...data,
-      tags: JSON.parse(data.tags || '[]')
+      ...noteData,
+      tags: JSON.parse(noteData.tags || '[]')
     }
     
     set(state => ({
@@ -760,8 +770,9 @@ export const useVocabStore = create<VocabStore>((set, get) => ({
   
   // Export
   exportData: () => {
-    const { words, categories, notes, stats } = get()
-    return { words, categories, notes, stats }
+    const { currentUserId } = get()
+    // استخدام API للتصدير الشامل بدلاً من البيانات المحلية
+    return { userId: currentUserId, source: 'local-export' }
   },
   
   // Import - استخدام API شامل لاستيراد جميع البيانات

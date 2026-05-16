@@ -3,8 +3,10 @@ import { db } from './db'
 
 /**
  * التحقق من ملكية المستخدم لكلمة معينة
+ * يرفض userId الفارغ أو غير المحدد لمنع تجاوز الملكية
  */
-export async function verifyWordOwnership(wordId: string, userId: string) {
+export async function verifyWordOwnership(wordId: string, userId: string | null | undefined) {
+  if (!userId) return null
   const word = await db.word.findFirst({
     where: { id: wordId, userId }
   })
@@ -14,7 +16,8 @@ export async function verifyWordOwnership(wordId: string, userId: string) {
 /**
  * التحقق من ملكية المستخدم لتصنيف معين
  */
-export async function verifyCategoryOwnership(categoryId: string, userId: string) {
+export async function verifyCategoryOwnership(categoryId: string, userId: string | null | undefined) {
+  if (!userId) return null
   const category = await db.category.findFirst({
     where: { id: categoryId, userId }
   })
@@ -24,7 +27,8 @@ export async function verifyCategoryOwnership(categoryId: string, userId: string
 /**
  * التحقق من ملكية المستخدم لملاحظة معينة
  */
-export async function verifyNoteOwnership(noteId: string, userId: string) {
+export async function verifyNoteOwnership(noteId: string, userId: string | null | undefined) {
+  if (!userId) return null
   const note = await db.note.findFirst({
     where: { id: noteId, userId }
   })
@@ -34,7 +38,8 @@ export async function verifyNoteOwnership(noteId: string, userId: string) {
 /**
  * التحقق من ملكية المستخدم لقصة معينة
  */
-export async function verifyStoryOwnership(storyId: string, userId: string) {
+export async function verifyStoryOwnership(storyId: string, userId: string | null | undefined) {
+  if (!userId) return null
   const story = await db.story.findFirst({
     where: { id: storyId, userId }
   })

@@ -203,7 +203,7 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
     }
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!word.trim() || !translation.trim()) {
       toast.error('الرجاء إدخال الكلمة والترجمة')
       return
@@ -227,7 +227,8 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
     if (sentence2.en.trim()) examples.push(sentence2.en.trim())
     if (sentence3.en.trim()) examples.push(sentence3.en.trim())
 
-    addWord({
+    try {
+      await addWord({
       word: word.trim(),
       translation: translation.trim(),
       definition: englishDefinition.trim() || undefined,
@@ -260,9 +261,12 @@ export function AddWordDialog({ open, onOpenChange }: AddWordDialogProps) {
       context: context.trim() || undefined,
     })
 
-    toast.success('تمت إضافة الكلمة بنجاح!')
-    resetForm()
-    onOpenChange(false)
+      toast.success('تمت إضافة الكلمة بنجاح!')
+      resetForm()
+      onOpenChange(false)
+    } catch (error) {
+      toast.error('فشل في إضافة الكلمة')
+    }
   }
 
   return (

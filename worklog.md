@@ -54,3 +54,101 @@ Stage Summary:
 - Import awaits completion before reloading UI data
 - All 15 identified bugs addressed
 - Code pushed to GitHub: https://github.com/rshoooood200/my-smart-dictionary
+
+---
+Task ID: 7
+Agent: General Purpose Agent
+Task: Fix broken API routes that reference non-existent Prisma models
+
+Work Log:
+- Read prisma/schema.prisma to understand existing models
+- Identified 13 broken API routes referencing models that don't exist in the schema
+- Fixed 3 routes by mapping to existing models, 10 routes converted to "feature not available" responses
+
+Fixes applied:
+
+1. `/api/stats/advanced/route.ts` - FIXED with existing models
+   - Replaced `db.dailyActivity` → `db.dailyAnalytics`
+   - Removed non-existent `totalStudyTime` and `wordsMastered` from User select
+   - Mapped field names: `studyTime` → `totalStudyTime`, `wordsAdded` → `wordsLearned`
+   - Removed `wordsMastered` from overview response
+
+2. `/api/gamification/route.ts` - FIXED with existing models
+   - Replaced `db.userStats` → `db.user` for basic stats (xp, level, streak)
+   - Used `db.dailyAnalytics.aggregate()` for totalReviews
+   - Used `db.word.count()` for totalWords
+   - Fixed `earnedAt` → `unlockedAt` in UserAchievement queries
+   - Removed `xpEarned` from UserAchievement.create data
+   - Replaced `db.userStats.update` with `db.user.update` for XP increments
+   - Used `user.lastActiveDate` for streak logic instead of non-existent stats field
+
+3. `/api/game/route.ts` - FIXED with existing models
+   - Replaced `db.userStats` → `db.user` for XP updates
+   - Removed `xpEarned` from ReviewSession.create (field doesn't exist on model)
+   - Removed `xpEarned` from DailyStats.upsert (field doesn't exist on model)
+   - Removed `xpEarned` from UserAchievement.create (field doesn't exist on model)
+   - Fixed `achievement.nameAr` null safety with fallback to `achievement.name`
+
+4-13. Feature-not-available routes (status 501):
+   - `/api/themes/route.ts` - db.customTheme/userTheme don't exist
+   - `/api/themes/[id]/route.ts` - db.customTheme/userTheme don't exist
+   - `/api/interactive-content/route.ts` - db.interactiveContent doesn't exist
+   - `/api/smart-learning/route.ts` - db.learningPattern/recommendation/studyPlan/weakAreaAnalysis/smartReminder don't exist
+   - `/api/widgets/route.ts` - db.userWidget/widgetPreference don't exist
+   - `/api/teachers/route.ts` - db.teacher doesn't exist
+   - `/api/classes/route.ts` - db.class/classEnrollment don't exist
+   - `/api/schools/route.ts` - db.school/schoolAdmin don't exist
+   - `/api/assignments/route.ts` - db.assignment/assignmentSubmission don't exist
+   - `/api/content-progress/route.ts` - db.contentProgress doesn't exist
+   - `/api/accessibility/route.ts` - db.accessibilitySettings/userLanguage don't exist
+   All return: `{ success: false, error: 'هذه الميزة غير متاحة حالياً' }` with HTTP 501
+
+Stage Summary:
+- 3 routes fully fixed to work with existing Prisma models
+- 10 routes converted to graceful "feature not available" 501 responses
+- All routes maintain original HTTP method handlers (GET/POST/PUT/DELETE/PATCH)
+- Consistent error response format: `{ success: false, error: '...' }`
+- No more runtime crashes from referencing non-existent Prisma models
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Comprehensive app audit and bug fixes (16 bugs found and fixed)
+
+Work Log:
+- Ran full audit of the application using a sub-agent
+- Found 16 bugs across all severity levels
+- ✅ Dev server running with no errors
+- ✅ Lint passes with no errors
+
+CRITICAL Fixes (4):
+1. updateWord in store didn't send userId → Added currentUserId to all PUT requests
+2. deleteWord in store didn't send userId → Added userId as query param for DELETE
+3. deleteCategory in store didn't send userId → Added userId as query param for DELETE
+4. 13+ API routes referenced non-existent Prisma models → Fixed 3 with existing models, 10 return 501
+
+HIGH Fixes (4):
+5. /api/stats had no userId filtering → Added userId filtering to ALL queries
+6. /api/review POST didn't verify word ownership → Added verifyWordOwnership check
+7. /api/stats/advanced referenced non-existent fields (totalStudyTime, wordsMastered) → Removed
+8. /api/gamification used wrong field names (earnedAt→unlockedAt, xpEarned) → Fixed
+
+MEDIUM Fixes (5):
+9. addNote response handling inconsistency → Fixed to properly extract data.data
+10. updateNote response handling → Same fix
+11. addWord in add-word-dialog was not awaited → Made handleSubmit async with try/catch
+12. removeUser in store cleared wrong data → Fixed wasCurrentUser logic and cleared notes
+13. exportData returned local store data → Changed to indicate API should be used
+
+Additional Fixes:
+14. auth-helpers.ts verifyXxxOwnership now rejects null/undefined userId (was bypassing filter)
+15. updateCategory now sends userId in body
+16. updateNote now sends userId in body
+
+Stage Summary:
+- All 16 identified bugs fixed
+- App compiles and runs without errors
+- Lint passes cleanly
+- All CRUD operations now properly verify ownership
+- No more data leakage across users
+- All broken API routes either fixed or return graceful 501

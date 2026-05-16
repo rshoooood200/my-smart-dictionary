@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { verifyWordOwnership } from '@/lib/auth-helpers';
 
 // GET - جلب كلمات للمراجعة
 export async function GET(request: NextRequest) {
@@ -82,6 +83,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'userId مطلوب' },
         { status: 400 }
+      );
+    }
+
+    // التحقق من ملكية الكلمة
+    const existingWord = await verifyWordOwnership(wordId, userId);
+    if (!existingWord) {
+      return NextResponse.json(
+        { success: false, error: 'غير مصرح لك بتعديل هذه الكلمة' },
+        { status: 403 }
       );
     }
 

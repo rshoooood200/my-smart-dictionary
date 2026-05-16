@@ -5,29 +5,41 @@ import { db } from '@/lib/db';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
     const period = searchParams.get('period') || 'all'; // all, week, month
 
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'userId مطلوب' },
+        { status: 400 }
+      );
+    }
+
     // إجمالي الكلمات
-    const totalWords = await db.word.count();
+    const totalWords = await db.word.count({
+      where: { userId },
+    });
     
     // الكلمات المحفوظة
     const learnedWords = await db.word.count({
-      where: { isLearned: true },
+      where: { userId, isLearned: true },
     });
     
     // الكلمات المفضلة
     const favoriteWords = await db.word.count({
-      where: { isFavorite: true },
+      where: { userId, isFavorite: true },
     });
 
     // الكلمات حسب المستوى
     const wordsByLevel = await db.word.groupBy({
       by: ['level'],
       _count: true,
+      where: { userId },
     });
 
     // الكلمات حسب التصنيف
     const wordsByCategory = await db.category.findMany({
+      where: { userId },
       include: {
         _count: {
           select: { words: true },
@@ -36,10 +48,13 @@ export async function GET(request: NextRequest) {
     });
 
     // جلسات المراجعة
-    const totalSessions = await db.reviewSession.count();
+    const totalSessions = await db.reviewSession.count({
+      where: { userId },
+    });
     
     // متوسط الأداء
     const sessions = await db.reviewSession.findMany({
+      where: { userId },
       select: {
         totalWords: true,
         correctCount: true,
@@ -59,18 +74,19 @@ export async function GET(request: NextRequest) {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       dailyStats = await db.dailyStats.findMany({
-        where: { date: { gte: weekAgo } },
+        where: { userId, date: { gte: weekAgo } },
         orderBy: { date: 'asc' },
       });
     } else if (period === 'month') {
       const monthAgo = new Date();
       monthAgo.setMonth(monthAgo.getMonth() - 1);
       dailyStats = await db.dailyStats.findMany({
-        where: { date: { gte: monthAgo } },
+        where: { userId, date: { gte: monthAgo } },
         orderBy: { date: 'asc' },
       });
     } else {
       dailyStats = await db.dailyStats.findMany({
+        where: { userId },
         orderBy: { date: 'desc' },
         take: 30,
       });
@@ -78,14 +94,16 @@ export async function GET(request: NextRequest) {
 
     // آخر الكلمات المضافة
     const recentWords = await db.word.findMany({
+      where: { userId },
       take: 5,
       orderBy: { createdAt: 'desc' },
       include: { category: true },
     });
 
-    // الكلمات التي تحتاج مراجعة (لم تُراجع منذ فترة أو معدل الإجابة منخفض)
+    // الكلمات التي تحتاج مراجعة
     const wordsNeedReview = await db.word.findMany({
       where: {
+        userId,
         OR: [
           { lastReviewedAt: null },
           { lastReviewedAt: { lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
