@@ -32,6 +32,7 @@ interface AILearningHubProps {
   weakWords?: string[]
   strongWords?: string[]
   learningLevel?: string
+  defaultMode?: string
 }
 
 const quickActions = [
@@ -47,10 +48,11 @@ export function AILearningHub({
   currentUserId, 
   weakWords = [], 
   strongWords = [],
-  learningLevel = 'beginner'
+  learningLevel = 'beginner',
+  defaultMode
 }: AILearningHubProps) {
   // State
-  const [activeMode, setActiveMode] = useState<string>('chat')
+  const [activeMode, setActiveMode] = useState<string>(defaultMode || 'chat')
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)

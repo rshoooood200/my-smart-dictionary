@@ -49,8 +49,7 @@ import { LearningSectionSelector } from './learning-section-selector'
 import { RewardsStore } from './rewards-store'
 import { AdminDashboard } from './admin-dashboard'
 import { AdminAnnouncements } from './admin-announcements'
-import { InteractiveContent } from './interactive-content'
-import { PronunciationPractice } from './pronunciation-practice'
+import { AILearningHub } from './ai-learning-hub'
 
 // Level config
 const levelConfig: Record<string, { color: string; bg: string; label: string; gradient: string }> = {
@@ -1209,22 +1208,22 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
             )}
             {activeNav === 'mindmap' && (
               <motion.div key="mindmap" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <InteractiveContent defaultTab="mindmap" />
+                <AILearningHub currentUserId={currentUserId || ''} defaultMode="chat" />
               </motion.div>
             )}
             {activeNav === 'grammar' && (
               <motion.div key="grammar" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <LearningSection defaultTab="grammar" />
+                <AILearningHub currentUserId={currentUserId || ''} defaultMode="grammar" />
               </motion.div>
             )}
             {activeNav === 'mistakes' && (
               <motion.div key="mistakes" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <LearningSection defaultTab="pronunciation" />
+                <AILearningHub currentUserId={currentUserId || ''} defaultMode="chat" />
               </motion.div>
             )}
             {activeNav === 'pronunciation-trainer' && (
               <motion.div key="pronunciation-trainer" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <PronunciationPractice currentUserId={currentUserId || undefined} />
+                <AILearningHub currentUserId={currentUserId || ''} defaultMode="pronunciation" />
               </motion.div>
             )}
             {activeNav === 'ai' && (
