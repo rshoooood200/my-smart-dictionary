@@ -85,29 +85,15 @@ const navItems: NavItem[] = [
       { id: 'lists', label: 'القوائم', icon: List },
       { id: 'review', label: 'المراجعة', icon: Brain },
       { id: 'games', label: 'الألعاب', icon: Gamepad2 },
+      { id: 'mindmap', label: 'الخرائط الذهنية', icon: Brain },
+      { id: 'grammar', label: 'التراكيب اللغوية', icon: BookOpen },
+      { id: 'mistakes', label: 'الأخطاء الشائعة', icon: Lightbulb },
+      { id: 'pronunciation-trainer', label: 'مدرب النطق', icon: Headphones },
     ]
   },
   { id: 'learning', label: 'التعلم', icon: GraduationCap },
   { id: 'paths', label: 'المسارات', icon: Route },
-  { 
-    id: 'language-tools', 
-    label: 'أدوات اللغة', 
-    icon: AlignLeft,
-    children: [
-      { id: 'mindmap', label: 'الخرائط الذهنية', icon: Brain },
-      { id: 'grammar', label: 'التراكيب اللغوية', icon: BookOpen },
-      { id: 'mistakes', label: 'الأخطاء الشائعة', icon: Lightbulb },
-    ]
-  },
-  { 
-    id: 'voice', 
-    label: 'الصوتيات', 
-    icon: Mic,
-    children: [
-      { id: 'voice-features', label: 'التمارين الصوتية', icon: Volume2 },
-      { id: 'pronunciation-trainer', label: 'مدرب النطق', icon: Headphones },
-    ]
-  },
+  { id: 'voice', label: 'الصوتيات', icon: Mic },
   { id: 'interactive', label: 'المحتوى التفاعلي', icon: Sparkles },
   { id: 'ai', label: 'المساعد الذكي', icon: Sparkles },
   { id: 'analytics', label: 'التحليلات', icon: BarChart3 },
@@ -1217,8 +1203,8 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
                 <LearningSectionSelector words={words} userId={currentUserId || undefined} />
               </motion.div>
             )}
-            {activeNav === 'voice-features' && (
-              <motion.div key="voice-features" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            {activeNav === 'voice' && (
+              <motion.div key="voice" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <VoiceFeatures words={words} onProgress={(result) => { if (result.passed) toast.success(`أحسنت! دقة ${result.accuracy}%`) }} />
               </motion.div>
             )}
