@@ -50,6 +50,10 @@ import { RewardsStore } from './rewards-store'
 import { AdminDashboard } from './admin-dashboard'
 import { AdminAnnouncements } from './admin-announcements'
 import { AILearningHub } from './ai-learning-hub'
+import { PronunciationTrainerAI } from './pronunciation-trainer-ai'
+import { GrammarExplorer } from './grammar-explorer'
+import { CommonErrorsExplorer } from './common-errors-explorer'
+import { MindMapGenerator } from './mind-map-generator'
 
 // Level config
 const levelConfig: Record<string, { color: string; bg: string; label: string; gradient: string }> = {
@@ -1208,22 +1212,22 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
             )}
             {activeNav === 'mindmap' && (
               <motion.div key="mindmap" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <AILearningHub currentUserId={currentUserId || ''} defaultMode="chat" />
+                <MindMapGenerator currentUserId={currentUserId || undefined} />
               </motion.div>
             )}
             {activeNav === 'grammar' && (
               <motion.div key="grammar" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <AILearningHub currentUserId={currentUserId || ''} defaultMode="grammar" />
+                <GrammarExplorer currentUserId={currentUserId || undefined} />
               </motion.div>
             )}
             {activeNav === 'mistakes' && (
               <motion.div key="mistakes" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <AILearningHub currentUserId={currentUserId || ''} defaultMode="chat" />
+                <CommonErrorsExplorer currentUserId={currentUserId || undefined} />
               </motion.div>
             )}
             {activeNav === 'pronunciation-trainer' && (
               <motion.div key="pronunciation-trainer" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <AILearningHub currentUserId={currentUserId || ''} defaultMode="pronunciation" />
+                <PronunciationTrainerAI currentUserId={currentUserId || ''} />
               </motion.div>
             )}
             {activeNav === 'ai' && (
