@@ -84,8 +84,8 @@ type ContentType = 'flashcard' | 'drag_drop' | 'fill_blank' | 'matching' | 'mind
 type Difficulty = 'beginner' | 'intermediate' | 'advanced'
 
 // Main Component
-export function InteractiveContent() {
-  const [activeTab, setActiveTab] = useState<string>('flashcards')
+export function InteractiveContent({ defaultTab }: { defaultTab?: string } = {}) {
+  const [activeTab, setActiveTab] = useState<string>(defaultTab || 'flashcards')
   const [contentType, setContentType] = useState<ContentType>('flashcard')
   const [difficulty, setDifficulty] = useState<Difficulty>('beginner')
   const [isPlaying, setIsPlaying] = useState(false)

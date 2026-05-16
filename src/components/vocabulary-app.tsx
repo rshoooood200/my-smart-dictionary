@@ -49,6 +49,8 @@ import { LearningSectionSelector } from './learning-section-selector'
 import { RewardsStore } from './rewards-store'
 import { AdminDashboard } from './admin-dashboard'
 import { AdminAnnouncements } from './admin-announcements'
+import { InteractiveContent } from './interactive-content'
+import { PronunciationPractice } from './pronunciation-practice'
 
 // Level config
 const levelConfig: Record<string, { color: string; bg: string; label: string; gradient: string }> = {
@@ -83,6 +85,10 @@ const navItems: NavItem[] = [
       { id: 'lists', label: 'القوائم', icon: List },
       { id: 'review', label: 'المراجعة', icon: Brain },
       { id: 'games', label: 'الألعاب', icon: Gamepad2 },
+      { id: 'mindmap', label: 'الخرائط الذهنية', icon: Brain },
+      { id: 'grammar', label: 'التراكيب اللغوية', icon: BookOpen },
+      { id: 'mistakes', label: 'الأخطاء الشائعة', icon: Lightbulb },
+      { id: 'pronunciation-trainer', label: 'مدرب النطق', icon: Headphones },
     ]
   },
   { id: 'learning', label: 'التعلم', icon: GraduationCap },
@@ -1199,6 +1205,26 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
             {activeNav === 'voice' && (
               <motion.div key="voice" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                 <VoiceFeatures words={words} onProgress={(result) => { if (result.passed) toast.success(`أحسنت! دقة ${result.accuracy}%`) }} />
+              </motion.div>
+            )}
+            {activeNav === 'mindmap' && (
+              <motion.div key="mindmap" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <InteractiveContent defaultTab="mindmap" />
+              </motion.div>
+            )}
+            {activeNav === 'grammar' && (
+              <motion.div key="grammar" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <LearningSection defaultTab="grammar" />
+              </motion.div>
+            )}
+            {activeNav === 'mistakes' && (
+              <motion.div key="mistakes" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <LearningSection defaultTab="pronunciation" />
+              </motion.div>
+            )}
+            {activeNav === 'pronunciation-trainer' && (
+              <motion.div key="pronunciation-trainer" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <PronunciationPractice currentUserId={currentUserId || undefined} />
               </motion.div>
             )}
             {activeNav === 'ai' && (
