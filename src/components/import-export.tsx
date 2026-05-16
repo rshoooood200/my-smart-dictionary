@@ -4,12 +4,11 @@ import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Download, Upload, FileJson, FileText, FileSpreadsheet,
-  Image, File, Check, X, AlertCircle, Loader2,
-  Trash2, Archive, RefreshCw, Copy, Share2,
-  Database, Shield, Clock, HardDrive, FileDown,
-  FileUp, Eye, ChevronDown, ChevronUp, Zap
+  Image, Check, X, AlertCircle, Loader2,
+  Trash2, Archive, RefreshCw, Database, Shield, HardDrive, FileDown,
+  Eye, Zap
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -21,30 +20,21 @@ import { useVocabStore, type Word } from '@/store/vocab-store'
 
 // أنواع الملفات
 type ImportType = 'json' | 'csv' | 'pdf' | 'image'
-type ExportType = 'json' | 'csv' | 'pdf' | 'txt'
+type ExportType = 'json' | 'csv' | 'txt' | 'pdf'
 
 // حالة الاستيراد
 interface ImportStatus {
   type: ImportType
-  status: 'idle' | 'processing' | 'success' | 'error'
+  status: 'idle' | 'processing' | 'success' | 'error' | 'importing'
   progress: number
   message: string
   data?: any
   preview?: Word[]
 }
 
-// سجل النسخ الاحتياطي
-interface BackupRecord {
-  id: string
-  date: Date
-  wordCount: number
-  categoryCount: number
-  size: string
-}
-
 export function ImportExport() {
-  const { words, categories, notes, stats, exportData, importData, loadWords, loadCategories, loadStats } = useVocabStore()
-  
+  const { words, categories, notes, currentUserId, loadWords, loadCategories, loadNotes, loadStats } = useVocabStore()
+
   // State
   const [importStatus, setImportStatus] = useState<ImportStatus>({
     type: 'json',
@@ -56,19 +46,9 @@ export function ImportExport() {
   const [previewData, setPreviewData] = useState<Word[]>([])
   const [exportFormat, setExportFormat] = useState<ExportType>('json')
   const [isExporting, setIsExporting] = useState(false)
-  const [showExportDialog, setShowExportDialog] = useState(false)
-  const [exportOptions, setExportOptions] = useState({
-    includeWords: true,
-    includeCategories: true,
-    includeNotes: true,
-    includeStats: true,
-    selectedCategories: [] as string[]
-  })
-  const [backups, setBackups] = useState<BackupRecord[]>([])
   const [activeTab, setActiveTab] = useState('import')
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const imageInputRef = useRef<HTMLInputElement>(null)
 
   // معالجة استيراد الملفات
   const handleFileImport = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,7 +56,7 @@ export function ImportExport() {
     if (!file) return
 
     const extension = file.name.split('.').pop()?.toLowerCase()
-    
+
     setImportStatus({
       type: extension as ImportType || 'json',
       status: 'processing',
@@ -104,7 +84,7 @@ export function ImportExport() {
       }))
       toast.error('فشل في استيراد الملف')
     }
-    
+
     // Reset input
     event.target.value = ''
   }, [])
@@ -112,7 +92,7 @@ export function ImportExport() {
   // استيراد JSON
   const handleJsonImport = async (file: File) => {
     const reader = new FileReader()
-    
+
     reader.onprogress = (e) => {
       if (e.lengthComputable) {
         setImportStatus(prev => ({
@@ -121,81 +101,134 @@ export function ImportExport() {
         }))
       }
     }
-    
+
     reader.onload = (e) => {
       try {
         const data = JSON.parse(e.target?.result as string)
-        
+
         setImportStatus(prev => ({
           ...prev,
           progress: 75,
           message: 'جاري تحليل البيانات...'
         }))
 
-        // معاينة البيانات
-        if (data.words && Array.isArray(data.words)) {
-          setPreviewData(data.words.slice(0, 10))
-          setImportStatus(prev => ({
-            ...prev,
-            status: 'success',
-            progress: 100,
-            message: `تم العثور على ${data.words.length} كلمة`,
-            data
-          }))
-          setShowPreview(true)
-        } else {
-          throw new Error('تنسيق الملف غير صالح')
+        // معاينة البيانات - التحقق من تنسيق الملف
+        const wordCount = data.words?.length || data.data?.words?.length || 0
+        const categoryCount = data.categories?.length || data.data?.categories?.length || 0
+        const noteCount = data.notes?.length || data.data?.notes?.length || 0
+        const storyCount = data.stories?.length || data.data?.stories?.length || 0
+        const listCount = data.customLists?.length || data.data?.customLists?.length || 0
+
+        if (wordCount === 0 && categoryCount === 0 && noteCount === 0 && storyCount === 0 && listCount === 0) {
+          throw new Error('لم يتم العثور على بيانات صالحة في الملف')
         }
+
+        // توحيد تنسيق البيانات
+        const importData = {
+          words: data.words || data.data?.words || [],
+          categories: data.categories || data.data?.categories || [],
+          notes: data.notes || data.data?.notes || [],
+          stories: data.stories || data.data?.stories || [],
+          customLists: data.customLists || data.data?.customLists || [],
+        }
+
+        // معاينة الكلمات
+        const previewWords = importData.words.slice(0, 10)
+        setPreviewData(previewWords)
+
+        const parts = []
+        if (wordCount > 0) parts.push(`${wordCount} كلمة`)
+        if (categoryCount > 0) parts.push(`${categoryCount} تصنيف`)
+        if (noteCount > 0) parts.push(`${noteCount} ملاحظة`)
+        if (storyCount > 0) parts.push(`${storyCount} قصة`)
+        if (listCount > 0) parts.push(`${listCount} قائمة`)
+
+        setImportStatus(prev => ({
+          ...prev,
+          status: 'success',
+          progress: 100,
+          message: `تم العثور على: ${parts.join('، ')}`,
+          data: importData
+        }))
+        setShowPreview(true)
       } catch (error) {
-        throw new Error('فشل في قراءة ملف JSON')
+        throw new Error('فشل في قراءة ملف JSON: ' + (error instanceof Error ? error.message : ''))
       }
     }
-    
+
     reader.readAsText(file)
   }
 
   // استيراد CSV
   const handleCsvImport = async (file: File) => {
     const reader = new FileReader()
-    
+
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string
         const lines = text.split('\n').filter(line => line.trim())
-        
+
         if (lines.length < 2) {
           throw new Error('الملف فارغ أو لا يحتوي بيانات')
         }
 
-        // تحليل CSV
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
+        // تحليل CSV مع دعم علامات الاقتباس
+        const parseCSVLine = (line: string): string[] => {
+          const result: string[] = []
+          let current = ''
+          let inQuotes = false
+
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i]
+            if (char === '"') {
+              if (inQuotes && line[i + 1] === '"') {
+                current += '"'
+                i++
+              } else {
+                inQuotes = !inQuotes
+              }
+            } else if (char === ',' && !inQuotes) {
+              result.push(current.trim())
+              current = ''
+            } else {
+              current += char
+            }
+          }
+          result.push(current.trim())
+          return result
+        }
+
+        const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase())
         const wordIndex = headers.findIndex(h => h.includes('word') || h.includes('كلمة'))
         const translationIndex = headers.findIndex(h => h.includes('translation') || h.includes('ترجمة'))
-        
+
         if (wordIndex === -1 || translationIndex === -1) {
           throw new Error('يجب أن يحتوي الملف على أعمدة للكلمات والترجمات')
         }
 
-        const parsedWords: Word[] = []
+        const parsedWords: any[] = []
         for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map(v => v.trim())
+          const values = parseCSVLine(lines[i])
           if (values[wordIndex] && values[translationIndex]) {
             parsedWords.push({
-              id: `import-${Date.now()}-${i}`,
               word: values[wordIndex],
               translation: values[translationIndex],
-              pronunciation: values[headers.findIndex(h => h.includes('pronunciation'))] || '',
-              definition: values[headers.findIndex(h => h.includes('definition'))] || '',
+              pronunciation: values[headers.findIndex(h => h.includes('pronunciation'))] || null,
+              definition: values[headers.findIndex(h => h.includes('definition'))] || null,
               partOfSpeech: values[headers.findIndex(h => h.includes('part') || h.includes('نوع'))] || 'noun',
               level: values[headers.findIndex(h => h.includes('level') || h.includes('مستوى'))] || 'beginner',
               isLearned: false,
               isFavorite: false,
               reviewCount: 0,
               correctCount: 0,
-              categoryId: '',
+              categoryId: null,
               sentences: [],
-              createdAt: new Date(),
-              updatedAt: new Date()
+              synonyms: [],
+              antonyms: [],
+              examples: [],
+              verbForms: {},
+              nounForms: {},
+              adjectiveForms: {},
             })
           }
         }
@@ -206,14 +239,14 @@ export function ImportExport() {
           status: 'success',
           progress: 100,
           message: `تم العثور على ${parsedWords.length} كلمة`,
-          data: { words: parsedWords }
+          data: { words: parsedWords, categories: [], notes: [], stories: [], customLists: [] }
         }))
         setShowPreview(true)
       } catch (error) {
         throw error
       }
     }
-    
+
     reader.readAsText(file)
   }
 
@@ -237,7 +270,7 @@ export function ImportExport() {
       if (!response.ok) throw new Error('فشل في تحليل PDF')
 
       const data = await response.json()
-      
+
       if (data.words && data.words.length > 0) {
         setPreviewData(data.words.slice(0, 10))
         setImportStatus(prev => ({
@@ -245,7 +278,7 @@ export function ImportExport() {
           status: 'success',
           progress: 100,
           message: `تم العثور على ${data.words.length} كلمة`,
-          data: { words: data.words }
+          data: { words: data.words, categories: [], notes: [], stories: [], customLists: [] }
         }))
         setShowPreview(true)
       } else {
@@ -276,7 +309,7 @@ export function ImportExport() {
       if (!response.ok) throw new Error('فشل في تحليل الصورة')
 
       const data = await response.json()
-      
+
       if (data.words && data.words.length > 0) {
         setPreviewData(data.words.slice(0, 10))
         setImportStatus(prev => ({
@@ -284,7 +317,7 @@ export function ImportExport() {
           status: 'success',
           progress: 100,
           message: `تم العثور على ${data.words.length} كلمة`,
-          data: { words: data.words }
+          data: { words: data.words, categories: [], notes: [], stories: [], customLists: [] }
         }))
         setShowPreview(true)
       } else {
@@ -295,43 +328,110 @@ export function ImportExport() {
     }
   }
 
-  // تأكيد الاستيراد
-  const confirmImport = () => {
-    if (importStatus.data) {
-      importData(importStatus.data)
-      loadWords()
-      loadCategories()
-      loadStats()
-      
-      toast.success(`تم استيراد ${importStatus.data.words?.length || 0} كلمة بنجاح`)
-      setShowPreview(false)
-      setImportStatus({
-        type: 'json',
-        status: 'idle',
-        progress: 0,
-        message: ''
+  // تأكيد الاستيراد - استخدام API الشامل
+  const confirmImport = async () => {
+    if (!importStatus.data || !currentUserId) return
+
+    setImportStatus(prev => ({
+      ...prev,
+      status: 'importing',
+      progress: 50,
+      message: 'جاري استيراد البيانات...'
+    }))
+    setShowPreview(false)
+
+    try {
+      const response = await fetch('/api/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUserId, data: importStatus.data }),
       })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // إعادة تحميل جميع البيانات
+        await loadWords()
+        await loadCategories()
+        await loadNotes()
+        loadStats()
+
+        const r = result.results
+        const parts = []
+        if (r.words?.imported > 0) parts.push(`${r.words.imported} كلمة`)
+        if (r.categories?.imported > 0) parts.push(`${r.categories.imported} تصنيف`)
+        if (r.notes?.imported > 0) parts.push(`${r.notes.imported} ملاحظة`)
+        if (r.stories?.imported > 0) parts.push(`${r.stories.imported} قصة`)
+        if (r.customLists?.imported > 0) parts.push(`${r.customLists.imported} قائمة`)
+
+        const skippedParts = []
+        if (r.words?.skipped > 0) skippedParts.push(`${r.words.skipped} كلمة مكررة`)
+        if (r.categories?.skipped > 0) skippedParts.push(`${r.categories.skipped} تصنيف مكرر`)
+
+        let message = parts.length > 0 ? `تم استيراد: ${parts.join('، ')}` : 'لم يتم استيراد بيانات جديدة'
+        if (skippedParts.length > 0) {
+          message += ` (تم تخطي: ${skippedParts.join('، ')})`
+        }
+
+        toast.success(message)
+
+        setImportStatus({
+          type: 'json',
+          status: 'idle',
+          progress: 0,
+          message: ''
+        })
+      } else {
+        toast.error(result.error || 'فشل في الاستيراد')
+        setImportStatus(prev => ({
+          ...prev,
+          status: 'error',
+          message: result.error || 'فشل في الاستيراد'
+        }))
+      }
+    } catch (error) {
+      toast.error('فشل في الاتصال بالخادم')
+      setImportStatus(prev => ({
+        ...prev,
+        status: 'error',
+        message: 'فشل في الاتصال بالخادم'
+      }))
     }
   }
 
-  // تصدير البيانات
+  // تصدير البيانات - استخدام API للتصدير الشامل
   const handleExport = useCallback(async () => {
+    if (!currentUserId) {
+      toast.error('لا يوجد مستخدم محدد')
+      return
+    }
+
     setIsExporting(true)
-    
+
     try {
-      const data = exportData()
-      
       if (exportFormat === 'json') {
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-        downloadBlob(blob, `vocabulary_${new Date().toISOString().split('T')[0]}.json`)
-        toast.success('تم تصدير البيانات بنجاح')
+        // استخدام API للحصول على تصدير شامل لجميع البيانات
+        const response = await fetch(`/api/export?format=json&userId=${currentUserId}`)
+        const data = await response.json()
+
+        if (!data.success) {
+          throw new Error(data.error || 'فشل في تصدير البيانات')
+        }
+
+        const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' })
+        downloadBlob(blob, `my-dictionary_${new Date().toISOString().split('T')[0]}.json`)
+        toast.success(`تم تصدير البيانات بنجاح (${data.totals?.words || 0} كلمة، ${data.totals?.categories || 0} تصنيف، ${data.totals?.notes || 0} ملاحظة)`)
       } else if (exportFormat === 'csv') {
-        const csv = convertToCSV(data.words)
-        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' })
+        // CSV - استخدام API
+        const response = await fetch(`/api/export?format=csv&userId=${currentUserId}`)
+        if (!response.ok) throw new Error('فشل في تصدير CSV')
+
+        const blob = await response.blob()
         downloadBlob(blob, `vocabulary_${new Date().toISOString().split('T')[0]}.csv`)
         toast.success('تم تصدير البيانات بنجاح')
       } else if (exportFormat === 'txt') {
-        const txt = convertToTxt(data.words)
+        // نص عادي - من بيانات المتجر المحلية
+        const txt = convertToTxt(words)
         const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' })
         downloadBlob(blob, `vocabulary_${new Date().toISOString().split('T')[0]}.txt`)
         toast.success('تم تصدير البيانات بنجاح')
@@ -341,49 +441,30 @@ export function ImportExport() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            words: data.words,
-            categories: data.categories,
+            words,
+            categories,
             userName: 'المستخدم',
             exportType: 'all'
           })
         })
-        
+
         if (!response.ok) throw new Error('فشل في تصدير PDF')
-        
+
         const blob = await response.blob()
         downloadBlob(blob, `vocabulary_${new Date().toISOString().split('T')[0]}.pdf`)
         toast.success('تم تصدير PDF بنجاح')
       }
-      
-      setShowExportDialog(false)
     } catch (error) {
-      toast.error('فشل في تصدير البيانات')
+      console.error('Export error:', error)
+      toast.error(error instanceof Error ? error.message : 'فشل في تصدير البيانات')
     } finally {
       setIsExporting(false)
     }
-  }, [exportData, exportFormat])
-
-  // تحويل إلى CSV
-  const convertToCSV = (wordList: Word[]): string => {
-    const headers = ['Word', 'Translation', 'Pronunciation', 'Part of Speech', 'Level', 'Definition']
-    const rows = wordList.map(w => [
-      w.word,
-      w.translation,
-      w.pronunciation || '',
-      w.partOfSpeech || '',
-      w.level || '',
-      w.definition || ''
-    ])
-    
-    return [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n')
-  }
+  }, [currentUserId, exportFormat, words, categories])
 
   // تحويل إلى نص
   const convertToTxt = (wordList: Word[]): string => {
-    return wordList.map(w => 
+    return wordList.map(w =>
       `${w.word} - ${w.translation}\n` +
       (w.pronunciation ? `النطق: ${w.pronunciation}\n` : '') +
       (w.definition ? `التعريف: ${w.definition}\n` : '') +
@@ -397,33 +478,14 @@ export function ImportExport() {
     const a = document.createElement('a')
     a.href = url
     a.download = filename
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }
 
-  // إنشاء نسخة احتياطية
-  const createBackup = () => {
-    const data = exportData()
-    const backup: BackupRecord = {
-      id: Date.now().toString(),
-      date: new Date(),
-      wordCount: data.words?.length || 0,
-      categoryCount: data.categories?.length || 0,
-      size: `${JSON.stringify(data).length / 1024} KB`
-    }
-    
-    // حفظ في localStorage
-    const backupsStr = localStorage.getItem('vocab-backups') || '[]'
-    const backupsArr = JSON.parse(backupsStr)
-    backupsArr.unshift(backup)
-    localStorage.setItem('vocab-backups', JSON.stringify(backupsArr.slice(0, 10)))
-    
-    setBackups(backupsArr.slice(0, 10))
-    toast.success('تم إنشاء نسخة احتياطية')
-  }
-
   // حساب حجم البيانات
-  const dataSize = new Blob([JSON.stringify({ words, categories, notes, stats })]).size
+  const dataSize = new Blob([JSON.stringify({ words, categories, notes })]).size
   const dataSizeKB = (dataSize / 1024).toFixed(2)
 
   return (
@@ -464,7 +526,7 @@ export function ImportExport() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="import">
             <Upload className="w-4 h-4 mr-1" />
             استيراد
@@ -473,10 +535,6 @@ export function ImportExport() {
             <Download className="w-4 h-4 mr-1" />
             تصدير
           </TabsTrigger>
-          <TabsTrigger value="backup">
-            <Shield className="w-4 h-4 mr-1" />
-            نسخ احتياطي
-          </TabsTrigger>
         </TabsList>
 
         {/* تبويب الاستيراد */}
@@ -484,7 +542,7 @@ export function ImportExport() {
           {/* أنواع الملفات المدعومة */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { type: 'json', icon: FileJson, label: 'JSON', desc: 'ملف بيانات' },
+              { type: 'json', icon: FileJson, label: 'JSON', desc: 'ملف بيانات شامل' },
               { type: 'csv', icon: FileSpreadsheet, label: 'CSV', desc: 'جدول بيانات' },
               { type: 'pdf', icon: FileText, label: 'PDF', desc: 'مستند' },
               { type: 'image', icon: Image, label: 'صورة', desc: 'PNG, JPG' }
@@ -521,8 +579,8 @@ export function ImportExport() {
                 onChange={handleFileImport}
                 className="hidden"
               />
-              
-              {importStatus.status === 'processing' ? (
+
+              {importStatus.status === 'processing' || importStatus.status === 'importing' ? (
                 <div className="space-y-4">
                   <Loader2 className="w-12 h-12 mx-auto animate-spin text-emerald-500" />
                   <p>{importStatus.message}</p>
@@ -541,7 +599,7 @@ export function ImportExport() {
           </Card>
 
           {/* حالة الاستيراد */}
-          {importStatus.status !== 'idle' && importStatus.status !== 'processing' && (
+          {importStatus.status !== 'idle' && importStatus.status !== 'processing' && importStatus.status !== 'importing' && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -580,10 +638,10 @@ export function ImportExport() {
             </CardHeader>
             <CardContent className="space-y-3">
               {[
-                { type: 'json', icon: FileJson, label: 'JSON', desc: 'للاستيراد لاحقاً' },
-                { type: 'csv', icon: FileSpreadsheet, label: 'CSV', desc: 'لـ Excel و Google Sheets' },
-                { type: 'txt', icon: FileText, label: 'نص عادي', desc: 'للطباعة والمشاركة' },
-                { type: 'pdf', icon: FileDown, label: 'PDF', desc: 'مستند للطباعة' }
+                { type: 'json', icon: FileJson, label: 'JSON', desc: 'تصدير شامل - جميع البيانات (كلمات، تصنيفات، ملاحظات، قصص، قوائم)' },
+                { type: 'csv', icon: FileSpreadsheet, label: 'CSV', desc: 'الكلمات فقط - لـ Excel و Google Sheets' },
+                { type: 'txt', icon: FileText, label: 'نص عادي', desc: 'الكلمات فقط - للطباعة والمشاركة' },
+                { type: 'pdf', icon: FileDown, label: 'PDF', desc: 'الكلمات فقط - مستند للطباعة' }
               ].map((item) => (
                 <div
                   key={item.type}
@@ -615,7 +673,7 @@ export function ImportExport() {
             className="w-full bg-emerald-600 hover:bg-emerald-700"
             size="lg"
             onClick={handleExport}
-            disabled={isExporting || words.length === 0}
+            disabled={isExporting || !currentUserId || (words.length === 0 && exportFormat !== 'json')}
           >
             {isExporting ? (
               <>
@@ -630,84 +688,6 @@ export function ImportExport() {
             )}
           </Button>
         </TabsContent>
-
-        {/* تبويب النسخ الاحتياطي */}
-        <TabsContent value="backup" className="space-y-4 mt-4">
-          <Card className="border-0 shadow-md">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                    <HardDrive className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">النسخ الاحتياطي المحلي</p>
-                    <p className="text-xs text-gray-500">يتم حفظها في المتصفح</p>
-                  </div>
-                </div>
-                <Button onClick={createBackup}>
-                  <Archive className="w-4 h-4 mr-2" />
-                  إنشاء نسخة
-                </Button>
-              </div>
-
-              {backups.length > 0 ? (
-                <div className="space-y-2">
-                  {backups.map((backup, index) => (
-                    <div
-                      key={backup.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-full flex items-center justify-center font-bold">
-                          {index + 1}
-                        </span>
-                        <div>
-                          <p className="text-sm font-medium">
-                            {new Date(backup.date).toLocaleDateString('ar-SA')}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {backup.wordCount} كلمة • {backup.size}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button variant="outline" size="sm">
-                          <RefreshCw className="w-3 h-3" />
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-gray-500">
-                  <Archive className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">لا توجد نسخ احتياطية</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* معلومات */}
-          <Card className="border-0 shadow-md bg-gradient-to-br from-violet-500 to-purple-600 text-white">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-white/20 rounded-lg shrink-0">
-                  <Zap className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold mb-1">نصيحة</h4>
-                  <p className="text-white/90 text-sm">
-                    قم بإنشاء نسخة احتياطية بشكل منتظم لحماية بياناتك. يمكنك تصدير البيانات كملف JSON لحفظها على جهازك.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       {/* نافذة المعاينة */}
@@ -716,10 +696,14 @@ export function ImportExport() {
           <DialogHeader>
             <DialogTitle>معاينة البيانات المستوردة</DialogTitle>
             <DialogDescription>
-              تم العثور على {previewData.length} كلمة (عرض أول 10 كلمات)
+              تم العثور على {importStatus.data?.words?.length || 0} كلمة (عرض أول 10)
+              {importStatus.data?.categories?.length > 0 && `، ${importStatus.data.categories.length} تصنيف`}
+              {importStatus.data?.notes?.length > 0 && `، ${importStatus.data.notes.length} ملاحظة`}
+              {importStatus.data?.stories?.length > 0 && `، ${importStatus.data.stories.length} قصة`}
+              {importStatus.data?.customLists?.length > 0 && `، ${importStatus.data.customLists.length} قائمة`}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-3">
             {previewData.map((word, index) => (
               <div

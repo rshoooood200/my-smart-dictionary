@@ -178,7 +178,7 @@ interface VocabStore {
   
   // Export/Import
   exportData: () => { words: Word[]; categories: Category[]; notes: Note[]; stats: UserStats | null }
-  importData: (data: any) => void
+  importData: (data: any) => Promise<{ success: boolean; results?: any; error?: string }>
 }
 
 // Helper to get stats from words
@@ -764,32 +764,35 @@ export const useVocabStore = create<VocabStore>((set, get) => ({
     return { words, categories, notes, stats }
   },
   
-  // Import
-  importData: (data: any) => {
-    if (data.words) {
-      // Import words via API one by one
-      const { currentUserId } = get()
-      if (currentUserId) {
-        data.words.forEach((w: any) => {
-          fetch('/api/words', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...w, userId: currentUserId }),
-          }).catch(err => console.error('Error importing word:', err))
-        })
-      }
+  // Import - استخدام API شامل لاستيراد جميع البيانات
+  importData: async (data: any): Promise<{ success: boolean; results?: any; error?: string }> => {
+    const { currentUserId } = get()
+    if (!currentUserId) {
+      return { success: false, error: 'لا يوجد مستخدم محدد' }
     }
-    if (data.categories) {
-      const { currentUserId } = get()
-      if (currentUserId) {
-        data.categories.forEach((c: any) => {
-          fetch('/api/categories', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...c, userId: currentUserId }),
-          }).catch(err => console.error('Error importing category:', err))
-        })
+
+    try {
+      const response = await fetch('/api/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUserId, data }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // إعادة تحميل جميع البيانات بعد الاستيراد
+        await get().loadWords()
+        await get().loadCategories()
+        await get().loadNotes()
+        get().loadStats()
+        return { success: true, results: result.results }
+      } else {
+        return { success: false, error: result.error || 'فشل في الاستيراد' }
       }
+    } catch (error) {
+      console.error('Error importing data:', error)
+      return { success: false, error: 'فشل في الاتصال بالخادم' }
     }
   },
 }))

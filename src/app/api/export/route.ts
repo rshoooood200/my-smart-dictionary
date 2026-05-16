@@ -1,22 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-// GET - تصدير الكلمات
+// GET - تصدير جميع البيانات
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const format = searchParams.get('format') || 'json';
+    const userId = searchParams.get('userId');
 
-    const words = await db.word.findMany({
-      include: {
-        category: true,
-        sentences: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'معرف المستخدم مطلوب' },
+        { status: 400 }
+      );
+    }
+
+    // جلب جميع بيانات المستخدم
+    const [words, categories, notes, stories, customLists] = await Promise.all([
+      db.word.findMany({
+        where: { userId },
+        include: {
+          category: true,
+          sentences: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      db.category.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      db.note.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      db.story.findMany({
+        where: { userId },
+        include: {
+          storyWords: true,
+          questions: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      db.customList.findMany({
+        where: { userId },
+        include: {
+          listWords: {
+            include: {
+              word: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
 
     if (format === 'csv') {
-      // تنسيق CSV
+      // تنسيق CSV - الكلمات فقط
       const headers = ['الكلمة', 'الترجمة', 'النطق', 'التعريف', 'النوع', 'المستوى', 'التصنيف', 'تاريخ الإضافة'];
       const rows = words.map(w => [
         w.word,
@@ -31,7 +70,7 @@ export async function GET(request: NextRequest) {
 
       const csv = [
         headers.join(','),
-        ...rows.map(r => r.map(cell => `"${cell}"`).join(','))
+        ...rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       ].join('\n');
 
       return new NextResponse(csv, {
@@ -75,100 +114,122 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // JSON format (default)
-    return NextResponse.json({
-      success: true,
-      data: words,
-      exportedAt: new Date().toISOString(),
-      total: words.length,
-    });
-  } catch (error) {
-    console.error('Error exporting words:', error);
-    return NextResponse.json(
-      { success: false, error: 'فشل في تصدير الكلمات' },
-      { status: 500 }
-    );
-  }
-}
-
-// POST - استيراد الكلمات
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { words, skipDuplicates = true } = body;
-
-    if (!Array.isArray(words) || words.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'البيانات غير صالحة' },
-        { status: 400 }
-      );
-    }
-
-    const results = {
-      imported: 0,
-      skipped: 0,
-      errors: [] as string[],
+    // JSON format (default) - تصدير شامل لجميع البيانات
+    const exportData = {
+      words: words.map(w => ({
+        word: w.word,
+        translation: w.translation,
+        pronunciation: w.pronunciation,
+        definition: w.definition,
+        partOfSpeech: w.partOfSpeech,
+        level: w.level,
+        isLearned: w.isLearned,
+        isFavorite: w.isFavorite,
+        reviewCount: w.reviewCount,
+        correctCount: w.correctCount,
+        lastReviewedAt: w.lastReviewedAt?.toISOString(),
+        nextReviewAt: w.nextReviewAt?.toISOString(),
+        easeFactor: w.easeFactor,
+        interval: w.interval,
+        repetitions: w.repetitions,
+        verbForms: {
+          past: w.verbPast,
+          pastParticiple: w.verbPastParticiple,
+          present: w.verbPresent,
+          gerund: w.verbGerund,
+          thirdPerson: w.verbThirdPerson,
+        },
+        nounForms: {
+          singular: w.nounSingular,
+          plural: w.nounPlural,
+          countable: w.nounCountable,
+        },
+        adjectiveForms: {
+          comparative: w.adjComparative,
+          superlative: w.adjSuperlative,
+          adverb: w.adjAdverb,
+        },
+        examples: JSON.parse(w.examples || '[]'),
+        arabicMeaning: w.arabicMeaning,
+        context: w.context,
+        synonyms: JSON.parse(w.synonyms || '[]'),
+        antonyms: JSON.parse(w.antonyms || '[]'),
+        usageNotes: w.usageNotes,
+        categoryName: w.category?.name || null,
+        categoryNameAr: w.category?.nameAr || null,
+        categoryColor: w.category?.color || null,
+        sentences: w.sentences.map(s => ({
+          sentence: s.sentence,
+          translation: s.translation,
+          isAiGenerated: s.isAiGenerated,
+        })),
+      })),
+      categories: categories.map(c => ({
+        name: c.name,
+        nameAr: c.nameAr,
+        color: c.color,
+        icon: c.icon,
+      })),
+      notes: notes.map(n => ({
+        title: n.title,
+        content: n.content,
+        color: n.color,
+        isPinned: n.isPinned,
+        isArchived: n.isArchived,
+        tags: JSON.parse(n.tags || '[]'),
+      })),
+      stories: stories.map(s => ({
+        title: s.title,
+        titleAr: s.titleAr,
+        content: s.content,
+        contentAr: s.contentAr,
+        level: s.level,
+        readingTime: s.readingTime,
+        wordCount: s.wordCount,
+        isFavorite: s.isFavorite,
+        isRead: s.isRead,
+        storyWords: s.storyWords.map(sw => ({
+          wordPosition: sw.position,
+        })),
+        questions: s.questions.map(q => ({
+          question: q.question,
+          questionAr: q.questionAr,
+          options: JSON.parse(q.options || '[]'),
+          answer: q.answer,
+        })),
+      })),
+      customLists: customLists.map(cl => ({
+        name: cl.name,
+        nameAr: cl.nameAr,
+        description: cl.description,
+        color: cl.color,
+        icon: cl.icon,
+        isPublic: cl.isPublic,
+        tags: JSON.parse(cl.tags || '[]'),
+        listWords: cl.listWords.map(lw => ({
+          wordText: lw.word?.word || '',
+          order: lw.order,
+          notes: lw.notes,
+        })),
+      })),
     };
 
-    for (const wordData of words) {
-      try {
-        const { word, translation, pronunciation, definition, partOfSpeech, level, categoryId } = wordData;
-
-        if (!word || !translation) {
-          results.errors.push(`كلمة بدون نص أو ترجمة`);
-          continue;
-        }
-
-        // التحقق من التكرار
-        if (skipDuplicates) {
-          const existing = await db.word.findUnique({
-            where: { word: word.toLowerCase().trim() },
-          });
-          if (existing) {
-            results.skipped++;
-            continue;
-          }
-        }
-
-        await db.word.create({
-          data: {
-            word: word.toLowerCase().trim(),
-            translation: translation.trim(),
-            pronunciation: pronunciation?.trim() || null,
-            definition: definition?.trim() || null,
-            partOfSpeech: partOfSpeech || null,
-            level: level || 'beginner',
-            categoryId: categoryId || null,
-          },
-        });
-
-        results.imported++;
-      } catch (err) {
-        results.errors.push(`خطأ في استيراد: ${wordData.word || 'غير معروف'}`);
-      }
-    }
-
-    // تحديث الإحصائيات
-    if (results.imported > 0) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      await db.dailyStats.upsert({
-        where: { date: today },
-        update: { wordsAdded: { increment: results.imported } },
-        create: { date: today, wordsAdded: results.imported },
-      });
-    }
-
     return NextResponse.json({
       success: true,
-      message: `تم استيراد ${results.imported} كلمة، تم تخطي ${results.skipped} كلمة مكررة`,
-      results,
+      data: exportData,
+      exportedAt: new Date().toISOString(),
+      totals: {
+        words: words.length,
+        categories: categories.length,
+        notes: notes.length,
+        stories: stories.length,
+        customLists: customLists.length,
+      },
     });
   } catch (error) {
-    console.error('Error importing words:', error);
+    console.error('Error exporting data:', error);
     return NextResponse.json(
-      { success: false, error: 'فشل في استيراد الكلمات' },
+      { success: false, error: 'فشل في تصدير البيانات' },
       { status: 500 }
     );
   }
