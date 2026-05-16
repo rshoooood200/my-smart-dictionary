@@ -190,8 +190,8 @@ const PRONUNCIATION_TIPS: PronunciationTip[] = [
 ]
 
 // المكون الرئيسي
-export function LearningSection() {
-  const [activeTab, setActiveTab] = useState('grammar')
+export function LearningSection({ defaultTab }: { defaultTab?: string } = {}) {
+  const [activeTab, setActiveTab] = useState(defaultTab || 'grammar')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [favorites, setFavorites] = useState<string[]>([])
