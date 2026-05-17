@@ -1110,10 +1110,12 @@ export function StoriesSection({ currentUserId, words }: StoriesSectionProps) {
     )
   }
 
-  // Reading mode
+  // Reading mode - Article/PDF style
   if (isReading && selectedStory) {
     const detectedWords = detectSavedWords(selectedStory.content, words, selectedStory.storyWords)
     const progress = totalWords > 0 ? (currentWordIndex / totalWords) * 100 : 0
+    // Split content into paragraphs for proper formatting
+    const contentParagraphs = cleanAndSanitizeContent(selectedStory.content).split(/\n+/).filter(p => p.trim())
     
     return (
       <>
@@ -1121,173 +1123,142 @@ export function StoriesSection({ currentUserId, words }: StoriesSectionProps) {
         key="reading"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-2xl mx-auto"
+        className="max-w-3xl mx-auto"
       >
-        <Card className="shadow-xl">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-2xl">{selectedStory.titleAr || selectedStory.title}</CardTitle>
-                <CardDescription className="flex items-center gap-3 mt-2">
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    {selectedStory.readingTime} دقيقة
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <FileText className="w-4 h-4" />
-                    {selectedStory.wordCount} كلمة
-                  </span>
-                </CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => toggleFavorite(selectedStory)}
-                >
-                  <Heart className={cn("w-5 h-5", selectedStory.isFavorite && "fill-rose-500 text-rose-500")} />
-                </Button>
-              </div>
+        {/* Reading Progress Bar - Top */}
+        <div className="sticky top-0 z-30 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
+          <div className="flex items-center gap-3 px-4 py-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 h-8 w-8"
+              onClick={() => { setIsReading(false); stopSpeech(); }}
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+            
+            <div className="flex-1 min-w-0">
+              <Progress value={progress} className="h-1.5" />
             </div>
-          </CardHeader>
-          
-          {/* Audio Controls */}
-          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-b">
-            <div className="flex flex-col gap-3">
-              {/* Main controls row */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Play/Pause */}
-                {!isPlaying ? (
-                  <Button
-                    size="icon"
-                    className="bg-emerald-600 hover:bg-emerald-700 shrink-0"
-                    onClick={() => playSpeech(selectedStory.content)}
-                  >
-                    <Play className="w-4 h-4" />
-                  </Button>
-                ) : isPaused ? (
-                  <Button
-                    size="icon"
-                    className="bg-emerald-600 hover:bg-emerald-700 shrink-0"
-                    onClick={resumeSpeech}
-                  >
-                    <Play className="w-4 h-4" />
-                  </Button>
-                ) : (
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    className="shrink-0"
-                    onClick={pauseSpeech}
-                  >
-                    <Pause className="w-4 h-4" />
-                  </Button>
-                )}
-                
-                {/* Stop */}
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="shrink-0"
-                  onClick={stopSpeech}
-                  disabled={!isPlaying}
-                >
-                  <VolumeX className="w-4 h-4" />
-                </Button>
-                
-                {/* Skip Backward */}
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="shrink-0"
-                  onClick={skipBackward}
-                  title="رجوع"
-                >
-                  <SkipBack className="w-4 h-4" />
-                </Button>
-                
-                {/* Skip Forward */}
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="shrink-0"
-                  onClick={skipForward}
-                  title="تقديم"
-                >
-                  <SkipForward className="w-4 h-4" />
-                </Button>
-                
-                {/* Time display */}
-                <div className="text-sm font-mono text-gray-600 dark:text-gray-400 px-2">
-                  {formatTime(elapsedTime)}
-                </div>
-                
-                {/* Progress bar */}
-                <div className="flex-1 min-w-20">
-                  <Progress value={progress} className="h-2" />
-                </div>
-                
-                {/* Word count */}
-                <div className="text-xs text-gray-500 whitespace-nowrap">
-                  {currentWordIndex}/{totalWords} كلمة
-                </div>
-                
-                {/* Speed Control */}
-                <div className="flex items-center gap-1 shrink-0">
-                  <Settings className="w-4 h-4 text-gray-500" />
-                  <Select
-                    value={speechRate.toString()}
-                    onValueChange={(v) => {
-                      const newRate = parseFloat(v)
-                      setSpeechRate(newRate)
-                      // Restart speech with new rate if playing
-                      if (isPlaying && !isPaused) {
-                        speechManagerRef.current?.cancel()
-                        setTimeout(() => {
-                          playSpeech(selectedStory.content, currentWordRef.current)
-                        }, 50)
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-16 h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0.5">0.5x</SelectItem>
-                      <SelectItem value="0.75">0.75x</SelectItem>
-                      <SelectItem value="1">1x</SelectItem>
-                      <SelectItem value="1.25">1.25x</SelectItem>
-                      <SelectItem value="1.5">1.5x</SelectItem>
-                      <SelectItem value="2">2x</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            
+            <div className="text-xs text-gray-500 font-mono whitespace-nowrap">
+              {currentWordIndex}/{totalWords}
             </div>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 h-8 w-8"
+              onClick={() => toggleFavorite(selectedStory)}
+            >
+              <Heart className={cn("w-4 h-4", selectedStory.isFavorite && "fill-rose-500 text-rose-500")} />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 h-8 w-8"
+              onClick={() => openEditDialog(selectedStory)}
+            >
+              <Edit2 className="w-4 h-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 h-8 w-8 text-rose-500 hover:text-rose-600"
+              onClick={() => deleteStory(selectedStory.id)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
           </div>
+        </div>
+
+        {/* Article Paper Container */}
+        <article className="bg-white dark:bg-gray-900 shadow-2xl rounded-b-lg overflow-hidden">
+          {/* Article Header */}
+          <header className="px-8 sm:px-12 pt-10 pb-8 border-b border-gray-100 dark:border-gray-800">
+            {/* Level & Meta Row */}
+            <div className="flex items-center gap-3 mb-5">
+              <Badge className={cn("text-xs font-medium", levelConfig[selectedStory.level]?.bg, levelConfig[selectedStory.level]?.color)}>
+                {levelConfig[selectedStory.level]?.label || selectedStory.level}
+              </Badge>
+              {selectedStory.isAiGenerated && (
+                <Badge variant="secondary" className="text-xs">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  AI
+                </Badge>
+              )}
+              {selectedStory.isRead && (
+                <Badge className="bg-emerald-100 text-emerald-700 text-xs">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  مقروءة
+                </Badge>
+              )}
+            </div>
+            
+            {/* Title */}
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white leading-tight mb-2" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+              {selectedStory.title}
+            </h1>
+            
+            {/* Arabic Title */}
+            {selectedStory.titleAr && selectedStory.title !== selectedStory.titleAr && (
+              <h2 className="text-xl sm:text-2xl font-semibold text-gray-600 dark:text-gray-400 leading-relaxed mb-4" dir="rtl">
+                {selectedStory.titleAr}
+              </h2>
+            )}
+            
+            {/* Meta Info */}
+            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-4 h-4" />
+                {selectedStory.readingTime} دقيقة قراءة
+              </span>
+              <span className="flex items-center gap-1.5">
+                <FileText className="w-4 h-4" />
+                {selectedStory.wordCount} كلمة
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Bookmark className="w-4 h-4" />
+                {selectedStory.savedWordsCount} كلمة محفوظة
+              </span>
+              <span>
+                {new Date(selectedStory.createdAt).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </span>
+            </div>
+            
+            {/* Decorative Separator */}
+            <div className="mt-6 flex items-center gap-3">
+              <div className="flex-1 h-px bg-gradient-to-l from-gray-200 to-transparent dark:from-gray-700" />
+              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+              <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent dark:from-gray-700" />
+            </div>
+          </header>
           
-          <CardContent className="prose dark:prose-invert max-w-none p-6">
-            {/* Arabic Translation */}
+          {/* Article Body */}
+          <div className="px-8 sm:px-12 py-8">
+            {/* Arabic Translation Section */}
             {selectedStory.contentAr && (
-              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="flex items-center gap-2 text-blue-600 mb-2">
+              <div className="mb-8 p-5 bg-gradient-to-br from-blue-50/80 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/10 rounded-xl border border-blue-100 dark:border-blue-800/50">
+                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-3">
                   <Languages className="w-4 h-4" />
-                  <span className="text-sm font-medium">الترجمة العربية</span>
+                  <span className="text-sm font-semibold">الترجمة العربية</span>
                 </div>
-                <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed">
+                <div className="text-gray-700 dark:text-gray-300 text-lg leading-loose whitespace-pre-wrap" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', serif" }}>
                   {selectedStory.contentAr}
-                </p>
+                </div>
               </div>
             )}
             
             {/* Translate Full Text Button */}
             {!selectedStory.contentAr && (
-              <div className="mb-4">
+              <div className="mb-8">
                 <Button
                   variant="outline"
                   onClick={() => translateFullText(selectedStory.content)}
                   disabled={isTranslatingFullText}
-                  className="w-full"
+                  className="w-full border-dashed border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600"
                 >
                   {isTranslatingFullText ? (
                     <>
@@ -1302,48 +1273,71 @@ export function StoriesSection({ currentUserId, words }: StoriesSectionProps) {
                   )}
                 </Button>
                 {fullTranslation && (
-                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed whitespace-pre-wrap">
+                  <div className="mt-4 p-5 bg-gradient-to-br from-blue-50/80 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/10 rounded-xl border border-blue-100 dark:border-blue-800/50">
+                    <div className="text-gray-700 dark:text-gray-300 text-lg leading-loose whitespace-pre-wrap" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', 'Traditional Arabic', serif" }}>
                       {fullTranslation}
-                    </p>
+                    </div>
                   </div>
                 )}
               </div>
             )}
             
-            {/* English Content with highlighted words */}
+            {/* English Article Content */}
             <div className="relative">
-              <div className="flex items-center gap-2 text-emerald-600 mb-2">
-                <BookOpen className="w-4 h-4" />
-                <span className="text-sm font-medium">النص الإنجليزي</span>
-                <span className="text-xs text-gray-500">(اضغط على كلمة أو حدد نصاً للترجمة)</span>
-              </div>
               <div
-                className="text-lg leading-relaxed select-text"
+                className="select-text"
                 onMouseUp={handleTextSelection}
                 onClick={handleWordClick}
-                dangerouslySetInnerHTML={{
-                  __html: highlightAllWords(selectedStory.content, words, selectedStory.storyWords)
+                style={{
+                  fontFamily: "'Georgia', 'Times New Roman', 'Noto Serif', serif",
+                  fontSize: '1.125rem',
+                  lineHeight: '2',
+                  letterSpacing: '0.01em',
+                  textAlign: 'justify',
+                  color: '#1a1a1a'
                 }}
-              />
+              >
+                {contentParagraphs.map((paragraph, idx) => {
+                  const highlightedHtml = highlightAllWords(paragraph, words, selectedStory.storyWords)
+                  return (
+                    <p 
+                      key={idx} 
+                      className="mb-5 text-justify dark:text-gray-200 first:first-letter:text-4xl first:first-letter:font-bold first:first-letter:text-emerald-600 first:first-letter:float-left first:first-letter:mr-1 first:first-letter:mt-1 first:first-letter:leading-none"
+                      dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Hint for interaction */}
+            <div className="mt-4 text-center text-xs text-gray-400 dark:text-gray-500">
+              اضغط على كلمة مميزة أو حدد نصاً للترجمة
+            </div>
+            
+            {/* Decorative End Mark */}
+            <div className="mt-6 flex items-center justify-center gap-2">
+              <div className="w-8 h-px bg-gray-300 dark:bg-gray-600" />
+              <div className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500" />
+              <div className="w-8 h-px bg-gray-300 dark:bg-gray-600" />
             </div>
             
             {/* Legend */}
-            <div className="mt-6 pt-4 border-t flex flex-wrap gap-4 text-sm">
+            <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800 flex flex-wrap gap-5 text-sm justify-center">
               <div className="flex items-center gap-2">
-                <span className="bg-emerald-200 dark:bg-emerald-800 px-2 py-0.5 rounded">كلمة</span>
-                <span className="text-gray-500">من كلمات القصة</span>
+                <span className="bg-emerald-200 dark:bg-emerald-800 px-2.5 py-0.5 rounded text-xs">كلمة</span>
+                <span className="text-gray-500 text-xs">من كلمات القصة</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="bg-amber-200 dark:bg-amber-800 px-2 py-0.5 rounded">كلمة</span>
-                <span className="text-gray-500">من كلماتك المحفوظة</span>
+                <span className="bg-amber-200 dark:bg-amber-800 px-2.5 py-0.5 rounded text-xs">كلمة</span>
+                <span className="text-gray-500 text-xs">من كلماتك المحفوظة</span>
               </div>
             </div>
             
-            {/* Detected words section */}
+            {/* Detected Words Section */}
             {detectedWords.length > 0 && (
-              <div className="mt-4 pt-4 border-t">
-                <h4 className="font-bold mb-2 flex items-center gap-2">
+              <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
+                <h4 className="font-bold mb-3 flex items-center gap-2 text-gray-700 dark:text-gray-300">
                   <Bookmark className="w-4 h-4 text-amber-600" />
                   الكلمات المكتشفة في القصة ({detectedWords.length})
                 </h4>
@@ -1354,11 +1348,11 @@ export function StoriesSection({ currentUserId, words }: StoriesSectionProps) {
                       <Badge 
                         key={i} 
                         variant="secondary" 
-                        className="text-sm cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors flex items-center gap-1"
+                        className="text-sm cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors flex items-center gap-1 py-1 px-2.5"
                       >
                         <span>{w.matched && w.matched !== w.word ? `${w.matched} ← ` : ''}{w.word}</span>
-                        <span className="text-gray-500">-</span>
-                        <span>{w.translation}</span>
+                        <span className="text-gray-400">—</span>
+                        <span className="text-gray-600 dark:text-gray-300">{w.translation}</span>
                         {variationLabel && (
                           <span className="text-xs text-amber-600 dark:text-amber-400 mr-1">
                             ({variationLabel})
@@ -1370,41 +1364,125 @@ export function StoriesSection({ currentUserId, words }: StoriesSectionProps) {
                 </div>
               </div>
             )}
-          </CardContent>
+          </div>
           
-          <div className="p-4 border-t flex justify-between">
-            <Button variant="outline" onClick={() => { setIsReading(false); stopSpeech(); }}>
-              <ChevronRight className="w-4 h-4 mr-2" />
-              العودة
-            </Button>
-            <div className="flex gap-2">
+          {/* Floating Audio Controls Bar */}
+          <div className="sticky bottom-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-3">
+            <div className="flex items-center gap-2 sm:gap-3 max-w-2xl mx-auto">
+              {/* Skip Backward */}
               <Button
-                variant="outline"
-                onClick={() => openEditDialog(selectedStory)}
+                size="icon"
+                variant="ghost"
+                className="shrink-0 h-9 w-9"
+                onClick={skipBackward}
+                title="رجوع"
               >
-                <Edit2 className="w-4 h-4 mr-2" />
-                تعديل
+                <SkipBack className="w-4 h-4" />
               </Button>
+
+              {/* Play/Pause */}
+              {!isPlaying ? (
+                <Button
+                  size="icon"
+                  className="bg-emerald-600 hover:bg-emerald-700 shrink-0 h-10 w-10 rounded-full shadow-lg"
+                  onClick={() => playSpeech(selectedStory.content)}
+                >
+                  <Play className="w-5 h-5 ml-0.5" />
+                </Button>
+              ) : isPaused ? (
+                <Button
+                  size="icon"
+                  className="bg-emerald-600 hover:bg-emerald-700 shrink-0 h-10 w-10 rounded-full shadow-lg"
+                  onClick={resumeSpeech}
+                >
+                  <Play className="w-5 h-5 ml-0.5" />
+                </Button>
+              ) : (
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="shrink-0 h-10 w-10 rounded-full border-2"
+                  onClick={pauseSpeech}
+                >
+                  <Pause className="w-5 h-5" />
+                </Button>
+              )}
+              
+              {/* Skip Forward */}
               <Button
-                variant="outline"
-                className="text-rose-600"
-                onClick={() => deleteStory(selectedStory.id)}
+                size="icon"
+                variant="ghost"
+                className="shrink-0 h-9 w-9"
+                onClick={skipForward}
+                title="تقديم"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
-                حذف
+                <SkipForward className="w-4 h-4" />
               </Button>
+              
+              {/* Stop */}
+              <Button
+                size="icon"
+                variant="ghost"
+                className="shrink-0 h-9 w-9"
+                onClick={stopSpeech}
+                disabled={!isPlaying}
+              >
+                <VolumeX className="w-4 h-4" />
+              </Button>
+              
+              {/* Time */}
+              <div className="text-xs font-mono text-gray-500 dark:text-gray-400 px-1">
+                {formatTime(elapsedTime)}
+              </div>
+              
+              {/* Progress */}
+              <div className="flex-1 min-w-12">
+                <Progress value={progress} className="h-1.5" />
+              </div>
+              
+              {/* Speed */}
+              <div className="flex items-center gap-1 shrink-0">
+                <Select
+                  value={speechRate.toString()}
+                  onValueChange={(v) => {
+                    const newRate = parseFloat(v)
+                    setSpeechRate(newRate)
+                    if (isPlaying && !isPaused) {
+                      speechManagerRef.current?.cancel()
+                      setTimeout(() => {
+                        playSpeech(selectedStory.content, currentWordRef.current)
+                      }, 50)
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-14 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0.5">0.5x</SelectItem>
+                    <SelectItem value="0.75">0.75x</SelectItem>
+                    <SelectItem value="1">1x</SelectItem>
+                    <SelectItem value="1.25">1.25x</SelectItem>
+                    <SelectItem value="1.5">1.5x</SelectItem>
+                    <SelectItem value="2">2x</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Quiz Button */}
               {(selectedStory._count?.questions || 0) > 0 && (
                 <Button
-                  className="bg-violet-600 hover:bg-violet-700"
+                  size="sm"
+                  className="bg-violet-600 hover:bg-violet-700 shrink-0 h-8"
                   onClick={() => startQuiz(selectedStory)}
                 >
-                  <Brain className="w-4 h-4 mr-2" />
-                  اختبار
+                  <Brain className="w-4 h-4 sm:mr-1" />
+                  <span className="hidden sm:inline">اختبار</span>
                 </Button>
               )}
             </div>
           </div>
-        </Card>
+        </article>
         
         {/* Translation Popup */}
         <AnimatePresence>

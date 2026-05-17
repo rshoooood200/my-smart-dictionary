@@ -121,46 +121,54 @@
   }
 }
 
-/* Word highlight styles for stories */
+/* Word highlight styles for stories - Article/PDF style */
 .word-highlight {
-  padding: 0.125rem 0.25rem;
-  border-radius: 0.25rem;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+  padding: 0 0.1rem;
 }
 
 .word-highlight.story-word {
-  background-color: #bbf7d0;
-  color: #166534;
+  background-color: rgba(187, 247, 208, 0.5);
+  border-bottom-color: #22c55e;
+  border-radius: 2px;
 }
 
 .dark .word-highlight.story-word {
-  background-color: #14532d;
-  color: #86efac;
+  background-color: rgba(20, 83, 45, 0.4);
+  border-bottom-color: #4ade80;
+  color: #d1fae5;
 }
 
 .word-highlight.story-word:hover {
-  background-color: #86efac;
+  background-color: #bbf7d0;
+  border-bottom-color: #16a34a;
 }
 
 .dark .word-highlight.story-word:hover {
-  background-color: #166534;
+  background-color: rgba(22, 101, 52, 0.6);
+  border-bottom-color: #86efac;
 }
 
 .word-highlight.saved-word {
-  background-color: #fde68a;
-  color: #92400e;
+  background-color: rgba(253, 230, 138, 0.4);
+  border-bottom-color: #f59e0b;
+  border-radius: 2px;
 }
 
 .dark .word-highlight.saved-word {
-  background-color: #78350f;
-  color: #fcd34d;
+  background-color: rgba(120, 53, 15, 0.4);
+  border-bottom-color: #fbbf24;
+  color: #fef3c7;
 }
 
 .word-highlight.saved-word:hover {
-  background-color: #fcd34d;
+  background-color: #fde68a;
+  border-bottom-color: #d97706;
 }
 
 .dark .word-highlight.saved-word:hover {
-  background-color: #92400e;
+  background-color: rgba(146, 64, 14, 0.6);
+  border-bottom-color: #fcd34d;
 }
