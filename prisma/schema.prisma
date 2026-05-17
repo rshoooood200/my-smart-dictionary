@@ -49,6 +49,7 @@ model User {
   userCurrency     UserCurrency?
   userItems        UserItem[]
   dailyRewards     DailyReward[]
+  savedMindMaps    SavedMindMap[]
   
   @@index([email])
 }
@@ -1157,4 +1158,20 @@ model GeminiConfig {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+model SavedMindMap {
+  id         String   @id @default(cuid())
+  userId     String
+  word       String
+  treeData   String   // JSON string of the mind map tree
+  wordCount  Int      @default(0)
+  isFavorite Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, word])
+  @@index([userId])
+  @@index([userId, isFavorite])
 }

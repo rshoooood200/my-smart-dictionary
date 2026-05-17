@@ -43,8 +43,6 @@ const branchColors = [
   { bg: '#EC4899', light: '#FCE7F3', dark: '#9D174D', label: 'pink' },
 ]
 
-const STORAGE_KEY = 'saved-mind-maps'
-
 function countWords(node: MindMapNode): number {
   let count = 1
   if (node.children) {
@@ -53,25 +51,6 @@ function countWords(node: MindMapNode): number {
     }
   }
   return count
-}
-
-function loadSavedMaps(userId?: string): SavedMindMap[] {
-  try {
-    const key = userId ? `${STORAGE_KEY}-${userId}` : STORAGE_KEY
-    const data = localStorage.getItem(key)
-    return data ? JSON.parse(data) : []
-  } catch {
-    return []
-  }
-}
-
-function saveSavedMaps(maps: SavedMindMap[], userId?: string) {
-  try {
-    const key = userId ? `${STORAGE_KEY}-${userId}` : STORAGE_KEY
-    localStorage.setItem(key, JSON.stringify(maps))
-  } catch {
-    toast.error('فشل في حفظ الخريطة')
-  }
 }
 
 export function MindMapGenerator({ currentUserId }: MindMapGeneratorProps) {
@@ -83,14 +62,31 @@ export function MindMapGenerator({ currentUserId }: MindMapGeneratorProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
   const [savedMaps, setSavedMaps] = useState<SavedMindMap[]>([])
   const [showSaved, setShowSaved] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const svgRef = useRef<SVGSVGElement>(null)
 
   const { spellError, isChecking, checkWord, clearError } = useSpellCheck()
 
+  // Fetch saved maps from API (database) instead of localStorage
+  const fetchSavedMaps = useCallback(async () => {
+    if (!currentUserId) return
+    try {
+      const response = await fetch('/api/mindmaps')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setSavedMaps(data.data)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching saved mind maps:', error)
+    }
+  }, [currentUserId])
+
   // Load saved maps on mount
   useEffect(() => {
-    setSavedMaps(loadSavedMaps(currentUserId))
-  }, [currentUserId])
+    fetchSavedMaps()
+  }, [fetchSavedMaps])
 
   // Check if current mind map is saved
   const isCurrentSaved = mindMap ? savedMaps.some(m => m.word.toLowerCase() === mindMap.word.toLowerCase()) : false
@@ -144,37 +140,35 @@ export function MindMapGenerator({ currentUserId }: MindMapGeneratorProps) {
     }
   }, [word, history, checkWord, clearError])
 
-  // Save mind map
-  const saveMindMap = useCallback(() => {
-    if (!mindMap) return
+  // Save mind map to database
+  const saveMindMap = useCallback(async () => {
+    if (!mindMap || !currentUserId) return
+    setIsSaving(true)
+    try {
+      const response = await fetch('/api/mindmaps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          word: mindMap.word,
+          treeData: mindMap,
+          wordCount: countWords(mindMap)
+        })
+      })
 
-    const existing = savedMaps.find(m => m.word.toLowerCase() === mindMap.word.toLowerCase())
-    if (existing) {
-      // Update existing
-      const updated = savedMaps.map(m => 
-        m.word.toLowerCase() === mindMap.word.toLowerCase()
-          ? { ...m, treeData: mindMap, wordCount: countWords(mindMap), savedAt: new Date().toISOString() }
-          : m
-      )
-      setSavedMaps(updated)
-      saveSavedMaps(updated, currentUserId)
-      toast.success('تم تحديث الخريطة المحفوظة! 💾')
-    } else {
-      // Save new
-      const newSaved: SavedMindMap = {
-        id: Date.now().toString(),
-        word: mindMap.word,
-        treeData: mindMap,
-        wordCount: countWords(mindMap),
-        isFavorite: false,
-        savedAt: new Date().toISOString()
+      if (!response.ok) throw new Error('Failed to save')
+
+      const data = await response.json()
+      if (data.success) {
+        // Refresh saved maps from server
+        await fetchSavedMaps()
+        toast.success(`تم حفظ الخريطة الذهنية! 💾 (${countWords(mindMap)} كلمة)`)
       }
-      const updated = [newSaved, ...savedMaps]
-      setSavedMaps(updated)
-      saveSavedMaps(updated, currentUserId)
-      toast.success(`تم حفظ الخريطة الذهنية! 💾 (${countWords(mindMap)} كلمة)`)
+    } catch {
+      toast.error('فشل في حفظ الخريطة')
+    } finally {
+      setIsSaving(false)
     }
-  }, [mindMap, savedMaps, currentUserId])
+  }, [mindMap, currentUserId, fetchSavedMaps])
 
   // Load saved mind map
   const loadMindMap = useCallback((saved: SavedMindMap) => {
@@ -194,21 +188,35 @@ export function MindMapGenerator({ currentUserId }: MindMapGeneratorProps) {
   }, [])
 
   // Delete saved mind map
-  const deleteSavedMap = useCallback((id: string) => {
-    const updated = savedMaps.filter(m => m.id !== id)
-    setSavedMaps(updated)
-    saveSavedMaps(updated, currentUserId)
-    toast.success('تم حذف الخريطة المحفوظة')
-  }, [savedMaps, currentUserId])
+  const deleteSavedMap = useCallback(async (id: string) => {
+    try {
+      const response = await fetch(`/api/mindmaps/${id}`, { method: 'DELETE' })
+      if (response.ok) {
+        await fetchSavedMaps()
+        toast.success('تم حذف الخريطة المحفوظة')
+      }
+    } catch {
+      toast.error('فشل في حذف الخريطة')
+    }
+  }, [fetchSavedMaps])
 
   // Toggle favorite
-  const toggleFavorite = useCallback((id: string) => {
-    const updated = savedMaps.map(m => 
-      m.id === id ? { ...m, isFavorite: !m.isFavorite } : m
-    )
-    setSavedMaps(updated)
-    saveSavedMaps(updated, currentUserId)
-  }, [savedMaps, currentUserId])
+  const toggleFavorite = useCallback(async (id: string) => {
+    const map = savedMaps.find(m => m.id === id)
+    if (!map) return
+    try {
+      const response = await fetch(`/api/mindmaps/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFavorite: !map.isFavorite })
+      })
+      if (response.ok) {
+        await fetchSavedMaps()
+      }
+    } catch {
+      toast.error('فشل في تحديث المفضلة')
+    }
+  }, [savedMaps, fetchSavedMaps])
 
   // Save all words from mind map to dictionary
   const saveAllWordsToDict = useCallback(() => {
@@ -619,13 +627,16 @@ export function MindMapGenerator({ currentUserId }: MindMapGeneratorProps) {
                   variant={isCurrentSaved ? "secondary" : "default"}
                   size="sm"
                   onClick={saveMindMap}
+                  disabled={isSaving}
                   className={cn(
                     isCurrentSaved
                       ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
                       : "bg-emerald-600 hover:bg-emerald-700 text-white"
                   )}
                 >
-                  {isCurrentSaved ? (
+                  {isSaving ? (
+                    <RefreshCw className="w-4 h-4 ml-1 animate-spin" />
+                  ) : isCurrentSaved ? (
                     <>
                       <BookmarkCheck className="w-4 h-4 ml-1" />
                       محفوظ ✓
