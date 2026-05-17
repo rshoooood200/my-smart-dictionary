@@ -69,19 +69,26 @@ export function MindMapGenerator({ currentUserId }: MindMapGeneratorProps) {
 
   // Fetch saved maps from API (database) instead of localStorage
   const fetchSavedMaps = useCallback(async () => {
-    if (!currentUserId) return
     try {
-      const response = await fetch('/api/mindmaps')
+      const response = await fetch('/api/mindmaps', {
+        credentials: 'include'
+      })
+      if (response.status === 401) {
+        // Not authenticated - silently skip
+        return
+      }
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
-          setSavedMaps(data.data)
+          setSavedMaps(data.data || [])
         }
+      } else {
+        console.error('Failed to fetch saved mind maps:', response.status)
       }
     } catch (error) {
       console.error('Error fetching saved mind maps:', error)
     }
-  }, [currentUserId])
+  }, [])
 
   // Load saved maps on mount
   useEffect(() => {
@@ -142,11 +149,15 @@ export function MindMapGenerator({ currentUserId }: MindMapGeneratorProps) {
 
   // Save mind map to database
   const saveMindMap = useCallback(async () => {
-    if (!mindMap || !currentUserId) return
+    if (!mindMap) {
+      toast.error('لا توجد خريطة لحفظها')
+      return
+    }
     setIsSaving(true)
     try {
       const response = await fetch('/api/mindmaps', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           word: mindMap.word,
@@ -155,7 +166,15 @@ export function MindMapGenerator({ currentUserId }: MindMapGeneratorProps) {
         })
       })
 
-      if (!response.ok) throw new Error('Failed to save')
+      if (response.status === 401) {
+        toast.error('يرجى تسجيل الدخول أولاً لحفظ الخريطة')
+        return
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to save')
+      }
 
       const data = await response.json()
       if (data.success) {
@@ -163,12 +182,13 @@ export function MindMapGenerator({ currentUserId }: MindMapGeneratorProps) {
         await fetchSavedMaps()
         toast.success(`تم حفظ الخريطة الذهنية! 💾 (${countWords(mindMap)} كلمة)`)
       }
-    } catch {
+    } catch (error) {
+      console.error('Save mind map error:', error)
       toast.error('فشل في حفظ الخريطة')
     } finally {
       setIsSaving(false)
     }
-  }, [mindMap, currentUserId, fetchSavedMaps])
+  }, [mindMap, fetchSavedMaps])
 
   // Load saved mind map
   const loadMindMap = useCallback((saved: SavedMindMap) => {
@@ -190,10 +210,17 @@ export function MindMapGenerator({ currentUserId }: MindMapGeneratorProps) {
   // Delete saved mind map
   const deleteSavedMap = useCallback(async (id: string) => {
     try {
-      const response = await fetch(`/api/mindmaps/${id}`, { method: 'DELETE' })
+      const response = await fetch(`/api/mindmaps/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
       if (response.ok) {
         await fetchSavedMaps()
         toast.success('تم حذف الخريطة المحفوظة')
+      } else if (response.status === 401) {
+        toast.error('يرجى تسجيل الدخول أولاً')
+      } else {
+        toast.error('فشل في حذف الخريطة')
       }
     } catch {
       toast.error('فشل في حذف الخريطة')
@@ -207,11 +234,14 @@ export function MindMapGenerator({ currentUserId }: MindMapGeneratorProps) {
     try {
       const response = await fetch(`/api/mindmaps/${id}`, {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isFavorite: !map.isFavorite })
       })
       if (response.ok) {
         await fetchSavedMaps()
+      } else if (response.status === 401) {
+        toast.error('يرجى تسجيل الدخول أولاً')
       }
     } catch {
       toast.error('فشل في تحديث المفضلة')
