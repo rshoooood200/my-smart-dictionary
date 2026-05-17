@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callGeminiJSON } from '@/lib/ai';
 import { db } from '@/lib/db';
+import { requireAuth, verifyWordOwnership } from '@/lib/auth-helpers';
 
 // POST - توليد جمل لكلمة معينة
 export async function POST(request: NextRequest) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const body = await request.json();
     const { wordId, word, translation, count = 5 } = body;
 
@@ -45,6 +50,15 @@ export async function POST(request: NextRequest) {
 
     // إذا كان هناك wordId، احفظ الجمل في قاعدة البيانات
     if (wordId && sentences) {
+      // التحقق من ملكية الكلمة
+      const existingWord = await verifyWordOwnership(wordId, userId);
+      if (!existingWord) {
+        return NextResponse.json(
+          { success: false, error: 'غير مصرح لك بإضافة جمل لهذه الكلمة' },
+          { status: 403 }
+        );
+      }
+
       await db.sentence.createMany({
         data: sentences.map((s) => ({
           sentence: s.sentence,

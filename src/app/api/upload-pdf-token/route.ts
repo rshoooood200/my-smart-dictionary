@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-helpers';
+import { put } from '@vercel/blob';
 
-// Generate upload token for client-side direct upload to Vercel Blob
+// Generate upload URL for client-side direct upload to Vercel Blob
 export async function POST(req: NextRequest) {
   try {
+    const auth = requireAuth(req);
+    if (auth instanceof NextResponse) return auth;
+
     const body = await req.json();
     const { filename } = body;
 
@@ -22,11 +27,10 @@ export async function POST(req: NextRequest) {
     const cleanName = filename.replace(/[^\w\.\-]/g, '_').substring(0, 50);
     const filePath = `pdfs/${timestamp}-${randomId}-${cleanName}`;
 
-    // Return the path and token for client-side upload
+    // Return the path only - don't expose the token
     return NextResponse.json({
       success: true,
       filePath,
-      token: blobToken,
     });
 
   } catch (error: any) {

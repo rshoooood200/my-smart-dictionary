@@ -153,6 +153,17 @@ export async function PUT(request: NextRequest) {
     }
 
     if (action === 'end' && sessionId) {
+      // التحقق من ملكية الجلسة
+      const existingSession = await db.reviewSession.findFirst({
+        where: { id: sessionId, userId }
+      });
+      if (!existingSession) {
+        return NextResponse.json(
+          { success: false, error: 'غير مصرح لك بتعديل هذه الجلسة' },
+          { status: 403 }
+        );
+      }
+
       const session = await db.reviewSession.update({
         where: { id: sessionId },
         data: {

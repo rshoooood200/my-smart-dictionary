@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { requireAuth, verifyStoryOwnership } from '@/lib/auth-helpers';
 
 /**
  * دالة تنظيف المحتوى من أي بيانات فاسدة أو خطيرة
@@ -44,14 +45,19 @@ function cleanStoryContent(text: string): string {
   return result;
 }
 
-// GET - جلب قصة واحدة
+// GET - جلب قصة واحدة (فقط قصصك الخاصة)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { id } = await params;
-    
+
+    // التحقق من الملكية
     const story = await db.story.findUnique({
       where: { id },
       include: {
@@ -71,6 +77,14 @@ export async function GET(
       );
     }
 
+    // التحقق من أن القصة تخص المستخدم
+    if (story.userId !== userId) {
+      return NextResponse.json(
+        { success: false, error: 'غير مصرح لك بالوصول لهذه القصة' },
+        { status: 403 }
+      );
+    }
+
     // تحويل الأسئلة - options مخزنة كـ JSON string
     const storyWithParsedQuestions = {
       ...story,
@@ -80,9 +94,9 @@ export async function GET(
       }))
     };
 
-    return NextResponse.json({ 
-      success: true, 
-      data: storyWithParsedQuestions 
+    return NextResponse.json({
+      success: true,
+      data: storyWithParsedQuestions
     });
   } catch (error) {
     console.error('Error fetching story:', error);
@@ -93,17 +107,31 @@ export async function GET(
   }
 }
 
-// PUT - تحديث قصة
+// PUT - تحديث قصة (فقط قصصك الخاصة)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { id } = await params;
+
+    // التحقق من الملكية
+    const existingStory = await verifyStoryOwnership(id, userId);
+    if (!existingStory) {
+      return NextResponse.json(
+        { success: false, error: 'غير مصرح لك بتعديل هذه القصة' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
-    const { 
+    const {
       title, titleAr, content, contentAr, level,
-      readingTime, wordCount, isFavorite, isRead 
+      readingTime, wordCount, isFavorite, isRead
     } = body;
 
     // تنظيف المحتوى قبل التحديث
@@ -137,13 +165,27 @@ export async function PUT(
   }
 }
 
-// PATCH - تحديث جزئي للقصة
+// PATCH - تحديث جزئي للقصة (فقط قصصك الخاصة)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { id } = await params;
+
+    // التحقق من الملكية
+    const existingStory = await verifyStoryOwnership(id, userId);
+    if (!existingStory) {
+      return NextResponse.json(
+        { success: false, error: 'غير مصرح لك بتعديل هذه القصة' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { isFavorite, isRead } = body;
 
@@ -166,22 +208,35 @@ export async function PATCH(
   }
 }
 
-// DELETE - حذف قصة
+// DELETE - حذف قصة (فقط قصصك الخاصة)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { id } = await params;
-    
+
+    // التحقق من الملكية
+    const existingStory = await verifyStoryOwnership(id, userId);
+    if (!existingStory) {
+      return NextResponse.json(
+        { success: false, error: 'غير مصرح لك بحذف هذه القصة' },
+        { status: 403 }
+      );
+    }
+
     // سيتم حذف storyWords و questions تلقائياً بسبب onDelete: Cascade
     await db.story.delete({
       where: { id }
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'تم حذف القصة بنجاح' 
+    return NextResponse.json({
+      success: true,
+      message: 'تم حذف القصة بنجاح'
     });
   } catch (error) {
     console.error('Error deleting story:', error);

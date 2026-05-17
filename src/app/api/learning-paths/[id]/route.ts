@@ -30,6 +30,14 @@ export async function GET(
       return NextResponse.json({ error: 'Path not found' }, { status: 404 })
     }
 
+    // التحقق: فقط المالك أو المسارات العامة
+    if (path.userId && path.userId !== userId && !path.isPublic) {
+      return NextResponse.json(
+        { error: 'غير مصرح لك بالوصول لهذا المسار' },
+        { status: 403 }
+      )
+    }
+
     // Calculate overall progress
     const totalLessons = path.lessons.length
     const progressData = path.progress || []
@@ -51,18 +59,34 @@ export async function GET(
   }
 }
 
-// PUT - Update a learning path
+// PUT - Update a learning path (فقط مساراتك)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { id } = await params
+
+    // التحقق من الملكية
+    const existing = await db.learningPath.findFirst({
+      where: { id, userId }
+    })
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'غير مصرح لك بتعديل هذا المسار' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
-    const { 
-      title, titleAr, description, descriptionAr, 
-      level, category, icon, color, isPublic, isTemplate, 
-      estimatedDays, lessons 
+    const {
+      title, titleAr, description, descriptionAr,
+      level, category, icon, color, isPublic, isTemplate,
+      estimatedDays, lessons
     } = body
 
     // If lessons provided, delete existing and create new
@@ -118,13 +142,28 @@ export async function PUT(
   }
 }
 
-// DELETE - Delete a learning path
+// DELETE - Delete a learning path (فقط مساراتك)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { id } = await params
+
+    // التحقق من الملكية
+    const existing = await db.learningPath.findFirst({
+      where: { id, userId }
+    })
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'غير مصرح لك بحذف هذا المسار' },
+        { status: 403 }
+      )
+    }
 
     await db.learningPath.delete({
       where: { id }
@@ -162,7 +201,6 @@ export async function PATCH(
     })
 
     if (existingProgress) {
-      // Update existing progress
       const updatedProgress = await db.learningProgress.update({
         where: { id: existingProgress.id },
         data: {
@@ -175,7 +213,6 @@ export async function PATCH(
       })
       return NextResponse.json({ progress: updatedProgress })
     } else {
-      // Create new progress
       const newProgress = await db.learningProgress.create({
         data: {
           pathId: id,

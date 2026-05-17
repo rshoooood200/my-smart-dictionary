@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import ZAI from 'z-ai-web-dev-sdk'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-helpers'
 
 interface ExtractedContent {
   quiz: {
@@ -191,6 +192,9 @@ async function analyzeContent(
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = requireAuth(request)
+    if (auth instanceof NextResponse) return auth
+
     const body = await request.json()
     const { videoId, title, titleAr, description, descriptionAr, category, targetAudience } = body
 
@@ -341,6 +345,9 @@ export async function POST(request: NextRequest) {
 // GET - Check analysis status for a video
 export async function GET(request: NextRequest) {
   try {
+    const auth = requireAuth(request)
+    if (auth instanceof NextResponse) return auth
+
     const searchParams = request.nextUrl.searchParams
     const videoId = searchParams.get('videoId')
 

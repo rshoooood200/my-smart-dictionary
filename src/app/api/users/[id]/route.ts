@@ -1,14 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-helpers';
 
-// GET - جلب مستخدم واحد
+// GET - جلب مستخدم واحد (فقط بياناتك الخاصة)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { id } = await params;
-    
+
+    // المستخدم يمكنه رؤية بياناته فقط
+    if (id !== userId) {
+      return NextResponse.json(
+        { success: false, error: 'غير مصرح لك بالوصول لبيانات مستخدم آخر' },
+        { status: 403 }
+      );
+    }
+
     const user = await db.user.findUnique({
       where: { id },
       include: {
@@ -25,8 +38,8 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: {
         id: user.id,
         name: user.name,
@@ -50,22 +63,34 @@ export async function GET(
   }
 }
 
-// DELETE - حذف مستخدم
+// DELETE - حذف مستخدم (فقط حسابك الخاص)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { id } = await params;
-    
+
+    // المستخدم يمكنه حذف حسابه فقط
+    if (id !== userId) {
+      return NextResponse.json(
+        { success: false, error: 'غير مصرح لك بحذف حساب مستخدم آخر' },
+        { status: 403 }
+      );
+    }
+
     // حذف المستخدم (سيتم حذف جميع البيانات المرتبطة تلقائياً بسبب onDelete: Cascade)
     await db.user.delete({
       where: { id },
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'تم حذف المستخدم بنجاح' 
+    return NextResponse.json({
+      success: true,
+      message: 'تم حذف المستخدم بنجاح'
     });
   } catch (error) {
     console.error('Error deleting user:', error);
@@ -76,13 +101,26 @@ export async function DELETE(
   }
 }
 
-// PUT - تحديث مستخدم
+// PUT - تحديث مستخدم (فقط حسابك الخاص)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
+
     const { id } = await params;
+
+    // المستخدم يمكنه تحديث حسابه فقط
+    if (id !== userId) {
+      return NextResponse.json(
+        { success: false, error: 'غير مصرح لك بتعديل بيانات مستخدم آخر' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { name, avatar, xp, level, currentStreak, longestStreak, achievements } = body;
 
@@ -100,8 +138,8 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: {
         id: user.id,
         name: user.name,

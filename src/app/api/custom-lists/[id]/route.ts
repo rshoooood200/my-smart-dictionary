@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth } from '@/lib/auth-helpers'
 
-// GET - Get a single custom list
+// GET - Get a single custom list (فقط قوائمك أو القوائم العامة)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = requireAuth(request)
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
     const { id } = await params
 
     const list = await db.customList.findUnique({
@@ -33,6 +38,14 @@ export async function GET(
       return NextResponse.json({ error: 'List not found' }, { status: 404 })
     }
 
+    // التحقق: فقط المالك أو القوائم العامة
+    if (list.userId !== userId && !list.isPublic) {
+      return NextResponse.json(
+        { error: 'غير مصرح لك بالوصول لهذه القائمة' },
+        { status: 403 }
+      )
+    }
+
     return NextResponse.json({ list })
   } catch (error) {
     console.error('Error fetching custom list:', error)
@@ -40,24 +53,38 @@ export async function GET(
   }
 }
 
-// PUT - Update a custom list
+// PUT - Update a custom list (فقط قوائمك)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = requireAuth(request)
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
     const { id } = await params
+
+    // التحقق من الملكية
+    const existing = await db.customList.findFirst({
+      where: { id, userId }
+    })
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'غير مصرح لك بتعديل هذه القائمة' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
     const { name, nameAr, description, color, icon, isPublic, isTemplate, tags, wordIds } = body
 
     // If wordIds provided, update the list words
     if (wordIds) {
-      // Delete existing words
       await db.customListWord.deleteMany({
         where: { listId: id }
       })
 
-      // Create new words
       await db.customListWord.createMany({
         data: wordIds.map((wordId: string, index: number) => ({
           listId: id,
@@ -97,13 +124,28 @@ export async function PUT(
   }
 }
 
-// DELETE - Delete a custom list
+// DELETE - Delete a custom list (فقط قوائمك)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = requireAuth(request)
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
     const { id } = await params
+
+    // التحقق من الملكية
+    const existing = await db.customList.findFirst({
+      where: { id, userId }
+    })
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'غير مصرح لك بحذف هذه القائمة' },
+        { status: 403 }
+      )
+    }
 
     await db.customList.delete({
       where: { id }
@@ -116,18 +158,33 @@ export async function DELETE(
   }
 }
 
-// PATCH - Add/remove words from list
+// PATCH - Add/remove words from list (فقط قوائمك)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = requireAuth(request)
+    if (auth instanceof NextResponse) return auth
+    const { userId } = auth
+
     const { id } = await params
+
+    // التحقق من الملكية
+    const existing = await db.customList.findFirst({
+      where: { id, userId }
+    })
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'غير مصرح لك بتعديل هذه القائمة' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
     const { action, wordId } = body
 
     if (action === 'add') {
-      // Get current max order
       const maxOrder = await db.customListWord.findFirst({
         where: { listId: id },
         orderBy: { order: 'desc' },
@@ -142,7 +199,6 @@ export async function PATCH(
         }
       })
 
-      // Update word count
       await db.customList.update({
         where: { id },
         data: { wordCount: { increment: 1 } }
@@ -154,7 +210,6 @@ export async function PATCH(
         }
       })
 
-      // Update word count
       await db.customList.update({
         where: { id },
         data: { wordCount: { decrement: 1 } }

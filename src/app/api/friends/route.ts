@@ -234,6 +234,21 @@ export async function POST(request: NextRequest) {
     if (type === 'remove-friend') {
       const { friendshipId } = data
 
+      // التحقق من أن المستخدم طرف في الصداقة
+      const friendship = await db.friendship.findFirst({
+        where: {
+          id: friendshipId,
+          OR: [
+            { requesterId: userId },
+            { addresseeId: userId }
+          ]
+        }
+      })
+
+      if (!friendship) {
+        return NextResponse.json({ error: 'الصداقة غير موجودة أو غير مصرح لك بحذفها' }, { status: 403 })
+      }
+
       await db.friendship.delete({
         where: { id: friendshipId }
       })

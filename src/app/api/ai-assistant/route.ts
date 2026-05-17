@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callGemini } from '@/lib/ai'
+import { requireAuth } from '@/lib/auth-helpers'
 
 interface Word {
   id: string
@@ -20,6 +21,9 @@ interface Message {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = requireAuth(request)
+    if (auth instanceof NextResponse) return auth
+
     const body = await request.json()
     const { message, words, stats, categories, history } = body
 
