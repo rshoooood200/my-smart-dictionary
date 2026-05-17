@@ -2,6 +2,34 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth-helpers'
 
+// Ensure the SavedMindMap table exists (auto-create if missing)
+let tableEnsured = false
+async function ensureTable() {
+  if (tableEnsured) return
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "SavedMindMap" (
+        "id" TEXT NOT NULL,
+        "userId" TEXT NOT NULL,
+        "word" TEXT NOT NULL,
+        "treeData" TEXT NOT NULL,
+        "wordCount" INTEGER NOT NULL DEFAULT 0,
+        "isFavorite" BOOLEAN NOT NULL DEFAULT false,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "SavedMindMap_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "SavedMindMap_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `)
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "SavedMindMap_userId_word_key" ON "SavedMindMap"("userId", "word");`)
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SavedMindMap_userId_idx" ON "SavedMindMap"("userId");`)
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SavedMindMap_userId_isFavorite_idx" ON "SavedMindMap"("userId", "isFavorite");`)
+    tableEnsured = true
+  } catch {
+    tableEnsured = true
+  }
+}
+
 // PATCH - تحديث خريطة ذهنية (مثل تبديل المفضلة)
 export async function PATCH(
   request: NextRequest,
@@ -11,6 +39,8 @@ export async function PATCH(
     const auth = requireAuth(request)
     if (auth instanceof NextResponse) return auth
     const { userId } = auth
+
+    await ensureTable()
 
     const { id } = await params
 
@@ -66,6 +96,8 @@ export async function DELETE(
     const auth = requireAuth(request)
     if (auth instanceof NextResponse) return auth
     const { userId } = auth
+
+    await ensureTable()
 
     const { id } = await params
 
