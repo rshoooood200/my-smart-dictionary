@@ -173,7 +173,11 @@ export function MindMapGenerator({ currentUserId }: MindMapGeneratorProps) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to save')
+        console.error('Save mind map API error:', response.status, errorData)
+        const errorMessage = errorData.details 
+          ? `${errorData.error}: ${errorData.details.substring(0, 100)}` 
+          : errorData.error || 'Failed to save'
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
@@ -184,7 +188,8 @@ export function MindMapGenerator({ currentUserId }: MindMapGeneratorProps) {
       }
     } catch (error) {
       console.error('Save mind map error:', error)
-      toast.error('فشل في حفظ الخريطة')
+      const msg = error instanceof Error ? error.message : 'فشل في حفظ الخريطة'
+      toast.error(`فشل في حفظ الخريطة: ${msg}`)
     } finally {
       setIsSaving(false)
     }

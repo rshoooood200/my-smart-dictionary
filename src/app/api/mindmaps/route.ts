@@ -9,6 +9,8 @@ export async function GET(request: NextRequest) {
     if (auth instanceof NextResponse) return auth
     const { userId } = auth
 
+    console.log('[mindmaps GET] userId:', userId)
+
     const { searchParams } = new URL(request.url)
     const isFavorite = searchParams.get('isFavorite')
 
@@ -35,11 +37,12 @@ export async function GET(request: NextRequest) {
       savedAt: map.createdAt.toISOString()
     }))
 
+    console.log('[mindmaps GET] Found', data.length, 'maps')
     return NextResponse.json({ success: true, data })
   } catch (error) {
-    console.error('Error fetching saved mind maps:', error)
+    console.error('[mindmaps GET] Error:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch saved mind maps' },
+      { success: false, error: 'Failed to fetch saved mind maps', details: String(error) },
       { status: 500 }
     )
   }
@@ -52,8 +55,12 @@ export async function POST(request: NextRequest) {
     if (auth instanceof NextResponse) return auth
     const { userId } = auth
 
+    console.log('[mindmaps POST] userId:', userId)
+
     const body = await request.json()
     const { word, treeData, wordCount } = body
+
+    console.log('[mindmaps POST] word:', word, 'wordCount:', wordCount, 'hasTreeData:', !!treeData)
 
     if (!word || !treeData) {
       return NextResponse.json(
@@ -67,9 +74,13 @@ export async function POST(request: NextRequest) {
       where: {
         userId_word: { userId, word: word.toLowerCase() }
       }
+    }).catch(err => {
+      console.error('[mindmaps POST] findUnique error:', err)
+      return null
     })
 
     if (existing) {
+      console.log('[mindmaps POST] Updating existing map:', existing.id)
       // Update existing
       const updated = await db.savedMindMap.update({
         where: { id: existing.id },
@@ -94,6 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new
+    console.log('[mindmaps POST] Creating new map for word:', word.toLowerCase())
     const saved = await db.savedMindMap.create({
       data: {
         userId,
@@ -103,6 +115,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    console.log('[mindmaps POST] Created map:', saved.id)
     return NextResponse.json({
       success: true,
       data: {
@@ -115,9 +128,9 @@ export async function POST(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Error saving mind map:', error)
+    console.error('[mindmaps POST] Error saving mind map:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to save mind map' },
+      { success: false, error: 'Failed to save mind map', details: String(error) },
       { status: 500 }
     )
   }
