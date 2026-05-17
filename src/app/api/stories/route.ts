@@ -64,6 +64,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const level = searchParams.get('level');
+    const isRead = searchParams.get('isRead');
+    const isFavorite = searchParams.get('isFavorite');
 
     const where: Record<string, unknown> = { userId };
 
