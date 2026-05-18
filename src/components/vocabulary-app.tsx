@@ -168,6 +168,9 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
 
   // New Games State
   const [spellingInput, setSpellingInput] = useState('')
+  const [spellingAttempts, setSpellingAttempts] = useState(0)
+  const [spellingFailedWords, setSpellingFailedWords] = useState<Word[]>([])
+  const [spellingHint, setSpellingHint] = useState('')
   const [scrambledLetters, setScrambledLetters] = useState<string[]>([])
   const [selectedLetters, setSelectedLetters] = useState<number[]>([])
   const [sentenceWords, setSentenceWords] = useState<{ word: string; index: number }[]>([])
@@ -448,19 +451,89 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
     setGameIndex(0)
     setGameScore(0)
     setSpellingInput('')
+    setSpellingAttempts(0)
+    setSpellingFailedWords([])
+    setSpellingHint('')
     setActiveGame('spelling')
   }, [words])
 
+  const MAX_SPELLING_ATTEMPTS = 3
+
   const handleSpellingAnswer = () => {
     const currentWord = gameWords[gameIndex]
+    if (!currentWord) return
+
+    // منع الإرسال الفارغ
+    if (!spellingInput.trim()) {
+      toast.error('الرجاء كتابة الكلمة أولاً')
+      return
+    }
+
     const isCorrect = spellingInput.trim().toLowerCase() === currentWord.word.toLowerCase()
-    if (isCorrect) { setGameScore(prev => prev + 15); toast.success('إجابة صحيحة! +15 نقاط') }
-    else { toast.error(`إجابة خاطئة! الكلمة الصحيحة: ${currentWord.word}`) }
+
+    if (isCorrect) {
+      // إجابة صحيحة
+      const attemptBonus = spellingAttempts === 0 ? 15 : spellingAttempts === 1 ? 10 : 5
+      setGameScore(prev => prev + attemptBonus)
+      toast.success(`إجابة صحيحة! +${attemptBonus} نقاط${spellingAttempts === 0 ? ' 🌟' : ''}`)
+
+      // الانتقال للكلمة التالية
+      moveToNextSpellingWord()
+    } else {
+      // إجابة خاطئة
+      const newAttempts = spellingAttempts + 1
+      setSpellingAttempts(newAttempts)
+
+      if (newAttempts >= MAX_SPELLING_ATTEMPTS) {
+        // نفدت المحاولات - إضافة الكلمة للمراجعة والانتقال للتالية
+        setSpellingFailedWords(prev => [...prev, currentWord])
+
+        // إضافة الكلمة لقائمة المراجعة (إعادة تعيين nextReviewAt)
+        updateWord(currentWord.id, {
+          nextReviewAt: new Date().toISOString(),
+        }).catch(() => {})
+
+        toast.error(`نفدت المحاولات! الكلمة الصحيحة: ${currentWord.word}`, { duration: 4000 })
+
+        // الانتقال للكلمة التالية
+        moveToNextSpellingWord()
+      } else {
+        // لا يزال لديه محاولات
+        const remaining = MAX_SPELLING_ATTEMPTS - newAttempts
+
+        // إعطاء تلميح تدريجي
+        const wordLen = currentWord.word.length
+        let hint = ''
+        if (newAttempts === 1) {
+          // تلميح أول: عدد الحروف + الحرف الأول
+          hint = `💡 تلميح: الكلمة تبدأ بحرف "${currentWord.word[0].toUpperCase()}" وتتكون من ${wordLen} حروف`
+        } else if (newAttempts === 2) {
+          // تلميح ثاني: الحرف الأول والأخير
+          hint = `💡 تلميح: تبدأ بـ "${currentWord.word[0].toUpperCase()}" وتنتهي بـ "${currentWord.word[wordLen - 1]}" ولديها ${wordLen} حروف`
+        }
+        setSpellingHint(hint)
+
+        toast.error(`الكلمة غير صحيحة! متبقي ${remaining} ${remaining === 1 ? 'محاولة' : 'محاولات'}`, { duration: 3000 })
+        setSpellingInput('')
+      }
+    }
+  }
+
+  const moveToNextSpellingWord = () => {
     if (gameIndex < gameWords.length - 1) {
       setGameIndex(prev => prev + 1)
       setSpellingInput('')
+      setSpellingAttempts(0)
+      setSpellingHint('')
     } else {
-      toast.success(`انتهت اللعبة! النتيجة: ${gameScore + (isCorrect ? 15 : 0)} نقطة`)
+      // انتهت اللعبة
+      const failedCount = spellingFailedWords.length
+      const finalScore = gameScore
+      if (failedCount > 0) {
+        toast.success(`انتهت اللعبة! النتيجة: ${finalScore} نقطة | ${failedCount} كلمة تحتاج مراجعة`, { duration: 5000 })
+      } else {
+        toast.success(`انتهت اللعبة! النتيجة: ${finalScore} نقطة 🎉`)
+      }
       setActiveGame(null)
       loadStats()
     }
@@ -1100,8 +1173,64 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
                     <CardContent className="p-6 text-center">
                       <p className="text-gray-500 mb-2">اكتب الكلمة الإنجليزية:</p>
                       <h2 className="text-2xl font-bold mb-4">{gameWords[gameIndex].translation}</h2>
-                      <Input value={spellingInput} onChange={(e) => setSpellingInput(e.target.value)} placeholder="اكتب الكلمة..." className="text-center text-lg mb-4" onKeyPress={(e) => e.key === 'Enter' && handleSpellingAnswer()} />
+
+                      {/* مؤشر المحاولات */}
+                      <div className="flex items-center justify-center gap-1.5 mb-3">
+                        {Array.from({ length: MAX_SPELLING_ATTEMPTS }).map((_, i) => (
+                          <div
+                            key={i}
+                            className={cn(
+                              "w-3 h-3 rounded-full transition-all duration-300",
+                              i < spellingAttempts
+                                ? "bg-rose-400 scale-110"
+                                : "bg-gray-200 dark:bg-gray-600"
+                            )}
+                          />
+                        ))}
+                        <span className="text-xs text-gray-400 mr-2">
+                          {MAX_SPELLING_ATTEMPTS - spellingAttempts} {MAX_SPELLING_ATTEMPTS - spellingAttempts === 1 ? 'محاولة' : 'محاولات'}
+                        </span>
+                      </div>
+
+                      {/* تلميح */}
+                      {spellingHint && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mb-3 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl text-sm text-amber-700 dark:text-amber-400"
+                        >
+                          {spellingHint}
+                        </motion.div>
+                      )}
+
+                      <Input
+                        value={spellingInput}
+                        onChange={(e) => setSpellingInput(e.target.value)}
+                        placeholder="اكتب الكلمة..."
+                        className={cn(
+                          "text-center text-lg mb-4 transition-all duration-300",
+                          spellingAttempts > 0 && spellingAttempts < MAX_SPELLING_ATTEMPTS
+                            ? "border-amber-300 dark:border-amber-600 focus:border-amber-500"
+                            : ""
+                        )}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSpellingAnswer()}
+                        autoFocus
+                      />
                       <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={handleSpellingAnswer}><Check className="w-4 h-4 mr-2" />تأكيد</Button>
+
+                      {/* عرض الكلمات الفاشلة إن وُجدت */}
+                      {spellingFailedWords.length > 0 && (
+                        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+                          <p className="text-xs text-gray-400 mb-2">كلمات تحتاج مراجعة:</p>
+                          <div className="flex flex-wrap gap-1.5 justify-center">
+                            {spellingFailedWords.map((w, i) => (
+                              <Badge key={i} variant="outline" className="text-xs border-rose-300 text-rose-600 dark:border-rose-600 dark:text-rose-400">
+                                {w.word} → {w.translation}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
