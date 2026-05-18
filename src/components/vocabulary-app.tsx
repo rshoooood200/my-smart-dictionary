@@ -553,6 +553,7 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
 
   const handleScrambleClick = (index: number) => {
     if (selectedLetters.includes(index)) {
+      // إزالة الحرف من الاختيار (تراجع)
       setSelectedLetters(prev => prev.filter(i => i !== index))
     } else {
       const newSelected = [...selectedLetters, index]
@@ -574,9 +575,27 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
             setActiveGame(null)
             loadStats()
           }
-        } else { toast.error('ترتيب خاطئ! حاول مرة أخرى'); setSelectedLetters([]) }
+        } else {
+          toast.error('ترتيب خاطئ! حاول مرة أخرى', { duration: 2000 })
+          // لا نمسح الاختيار فوراً - نعطي المستخدم فرصة للتعديل
+          setTimeout(() => {
+            setSelectedLetters([])
+          }, 800)
+        }
       }
     }
+  }
+
+  // حذف آخر حرف من الاختيار
+  const handleScrambleUndo = () => {
+    if (selectedLetters.length > 0) {
+      setSelectedLetters(prev => prev.slice(0, -1))
+    }
+  }
+
+  // حذف حرف محدد من الاختيار بالنقر عليه في منطقة العرض
+  const handleScrambleRemoveLetter = (index: number) => {
+    setSelectedLetters(prev => prev.filter(i => i !== index))
   }
 
   const startListeningGame = useCallback(() => {
@@ -1246,17 +1265,67 @@ export function VocabularyApp({ onLogout }: VocabularyAppProps) {
                     <CardContent className="p-6 text-center">
                       <p className="text-gray-500 mb-2">رتب الحروف لتكوين الكلمة:</p>
                       <h2 className="text-xl font-bold mb-4">{gameWords[gameIndex].translation}</h2>
-                      <div className="flex justify-center gap-2 mb-4 min-h-[48px] p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
+
+                      {/* منطقة الحروف المختارة - LTR للغة الإنجليزية */}
+                      <div dir="ltr" className="flex justify-center gap-2 mb-4 min-h-[52px] p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
                         {selectedLetters.length > 0 ? selectedLetters.map((i, idx) => (
-                          <span key={idx} className="w-8 h-8 flex items-center justify-center bg-emerald-600 text-white rounded-lg font-bold">{scrambledLetters[i]}</span>
-                        )) : <span className="text-gray-400">اضغط على الحروف لترتيبها</span>}
+                          <button
+                            key={idx}
+                            onClick={() => handleScrambleRemoveLetter(i)}
+                            className="w-10 h-10 flex items-center justify-center bg-emerald-600 hover:bg-rose-500 text-white rounded-lg font-bold text-lg transition-colors duration-200 cursor-pointer active:scale-95"
+                            title="اضغط للحذف"
+                          >
+                            {scrambledLetters[i]}
+                          </button>
+                        )) : <span className="text-gray-400 text-sm">اضغط على الحروف لترتيبها • اضغط على الحرف المختار لحذفه</span>}
                       </div>
-                      <div className="flex flex-wrap justify-center gap-2 mb-4">
-                        {scrambledLetters.map((letter, i) => (
-                          <Button key={i} variant={selectedLetters.includes(i) ? "secondary" : "outline"} className={cn("w-12 h-12 text-xl font-bold", selectedLetters.includes(i) && "opacity-50")} onClick={() => handleScrambleClick(i)} disabled={selectedLetters.includes(i)}>{letter}</Button>
-                        ))}
+
+                      {/* أزرار التراجع */}
+                      {selectedLetters.length > 0 && (
+                        <div className="flex justify-center gap-2 mb-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+                            onClick={handleScrambleUndo}
+                          >
+                            <ChevronRight className="w-4 h-4 mr-1" />
+                            تراجع
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+                            onClick={() => setSelectedLetters([])}
+                          >
+                            <RefreshCw className="w-4 h-4 mr-1" />
+                            مسح الكل
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* الحروف المتاحة - LTR */}
+                      <div dir="ltr" className="flex flex-wrap justify-center gap-2 mb-4">
+                        {scrambledLetters.map((letter, i) => {
+                          const isSelected = selectedLetters.includes(i)
+                          return (
+                            <Button
+                              key={i}
+                              variant={isSelected ? "secondary" : "outline"}
+                              className={cn(
+                                "w-12 h-12 text-xl font-bold transition-all duration-200",
+                                isSelected
+                                  ? "bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-500 line-through opacity-40 cursor-not-allowed"
+                                  : "hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-900/30 hover:border-emerald-600 active:scale-95"
+                              )}
+                              onClick={() => handleScrambleClick(i)}
+                              disabled={isSelected}
+                            >
+                              {letter}
+                            </Button>
+                          )
+                        })}
                       </div>
-                      <Button variant="outline" className="w-full" onClick={() => setSelectedLetters([])}><RefreshCw className="w-4 h-4 mr-2" />إعادة المحاولة</Button>
                     </CardContent>
                   </Card>
                 )}
